@@ -15,7 +15,7 @@ namespace VirtualizedGrid
         private Border PART_InnerCanvas = null!;
         private Grid PART_ItemsGrid = null!;
 
-        private List<List<IControl?>> renderedControls = new();
+        private List<List<StyledElement?>> renderedControls = new();
 
         public static readonly StyledProperty<double> ItemHeightProperty =
             AvaloniaProperty.Register<VirtualizedGrid, double>(nameof(ItemHeight), 64);
@@ -71,11 +71,6 @@ namespace VirtualizedGrid
             set => SetValue(DisableSmoothScrollingProperty, value);
         }
 
-        public VirtualizedGrid()
-        {
-            LayoutUpdated += (s, e) => UpdateState();
-        }
-
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
@@ -85,9 +80,10 @@ namespace VirtualizedGrid
             PART_ItemsGrid = e.NameScope.Find<Grid>(nameof(PART_ItemsGrid));
 
             PART_ScrollViewer.ScrollChanged += ScrollChanged;
+            LayoutUpdated += (s, e) => UpdateState();
         }
 
-        protected override void OnPropertyChanged<T>(AvaloniaPropertyChangedEventArgs<T> change)
+        protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
         {
             base.OnPropertyChanged(change);
             if (change.Property.Name == nameof(Items))
@@ -344,7 +340,7 @@ namespace VirtualizedGrid
                 }
             }
 
-            List<IControl> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.ColumnProperty) >= expectedColumnsNumber).ToList();
+            List<Control> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.ColumnProperty) >= expectedColumnsNumber).ToList();
             PART_ItemsGrid.Children.RemoveAll(childrenToRemove);
 
             PART_ItemsGrid.ColumnDefinitions.RemoveRange(expectedColumnsNumber, numberToRemove);
@@ -364,7 +360,7 @@ namespace VirtualizedGrid
                 }
             }
 
-            List<IControl> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.RowProperty) >= expectedRowsNumber).ToList();
+            List<Control> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.RowProperty) >= expectedRowsNumber).ToList();
             PART_ItemsGrid.Children.RemoveAll(childrenToRemove);
 
             PART_ItemsGrid.RowDefinitions.RemoveRange(expectedRowsNumber, numberToRemove);
