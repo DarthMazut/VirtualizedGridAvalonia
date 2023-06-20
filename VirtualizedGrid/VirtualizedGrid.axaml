@@ -1,0 +1,20 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:VirtualizedGrid">
+
+  <Style Selector="controls|VirtualizedGrid">
+    <!-- Set Defaults -->
+    <Setter Property="Template">
+      <ControlTemplate>
+		  <Grid>
+			  <ScrollViewer x:Name="PART_ScrollViewer" Padding="0,0,20,20" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+				  <Border x:Name="PART_InnerCanvas"/>
+			  </ScrollViewer>
+			  <ScrollViewer x:Name="PART_ClipScrollViewer" Margin="0,0,20,20" Background="{x:Null}" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+				  <Grid x:Name="PART_ItemsGrid" Background="{x:Null}"/>
+			  </ScrollViewer>
+		  </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+</Styles>
