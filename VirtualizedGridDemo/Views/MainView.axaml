@@ -3,14 +3,107 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:VirtualizedGridDemo.ViewModels"
+			 xmlns:converters="clr-namespace:VirtualizedGridDemo.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="VirtualizedGridDemo.Views.MainView"
-             x:DataType="vm:MainViewModel">
-  <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-    <vm:MainViewModel />
-  </Design.DataContext>
+             x:DataType="vm:MainViewModel"
+			 Background="#AAAAAA">
+	
+	<UserControl.Resources>
+		<converters:BooleanToArrowIconConverter x:Key="ArrowConverter" />
+		<converters:BooleanToPinIconConverter x:Key="PinConverter" />
+		<converters:BooleanToDisplayModeConverter x:Key="BoolToDisplayModeConverter" />
+		<converters:DisplayModeToBooleanConverter x:Key="DisplayModeToBoolConverter" />
+	</UserControl.Resources>
 
-  <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+	<UserControl.Styles>
+		<Style Selector="ToggleButton.ArrowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#33FFFFFF" />
+			<Setter Property="BorderBrush" Value="White" />
+			<Setter Property="TextBlock.Foreground" Value="White" />
+		</Style>
+
+		<Style Selector="ToggleButton.ArrowButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="BorderBrush" Value="White" />
+			<Setter Property="TextBlock.Foreground" Value="White" />
+		</Style>
+
+		<Style Selector="ToggleButton.ArrowButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#33FFFFFF" />
+			<Setter Property="BorderBrush" Value="White" />
+			<Setter Property="TextBlock.Foreground" Value="White" />
+		</Style>
+	</UserControl.Styles>
+
+	<SplitView
+		DisplayMode="{Binding IsChecked, ElementName=xe_PinButton, Converter={StaticResource BoolToDisplayModeConverter}}"
+		IsPaneOpen="{Binding IsChecked, ElementName=xe_PaneButton}"
+		PaneBackground="#333333">
+		<SplitView.Pane>
+			<DockPanel>
+				<StackPanel Margin="8" DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8">
+					<!-- ARROW -->
+					<ToggleButton
+						x:Name="xe_PaneButton"
+						Classes="ArrowButton"
+						IsChecked="{Binding $parent[SplitView].IsPaneOpen}"
+						CornerRadius="16"
+						Width="32"
+						Height="32"
+						BorderThickness="2"
+						BorderBrush="White"
+						Background="Transparent">
+						<TextBlock
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Foreground="White"
+							FontWeight="Bold"
+							Text="{Binding IsChecked, ElementName=xe_PaneButton, Converter={StaticResource ArrowConverter}}"/>
+					</ToggleButton>
+					<!-- PIN -->
+					<ToggleButton
+						x:Name="xe_PinButton"
+						Classes="ArrowButton"
+						IsChecked="{Binding $parent[SplitView].DisplayMode, Converter={StaticResource DisplayModeToBoolConverter}}"
+						CornerRadius="16"
+						Width="32"
+						Height="32"
+						BorderThickness="2"
+						BorderBrush="White"
+						Background="Transparent">
+						<TextBlock
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Foreground="White"
+							FontWeight="Bold"
+							Text="{Binding IsChecked, ElementName=xe_PinButton, Converter={StaticResource PinConverter}}"/>
+					</ToggleButton>
+				</StackPanel>
+				<Grid IsVisible="{Binding IsChecked, ElementName=xe_PaneButton}" Margin="8,0,8,0">
+					<StackPanel Spacing="4">
+						<TextBlock Text="Item height:" Foreground="White"/>
+						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="64"/>
+						<Border Height="10"/>
+						<TextBlock Text="Item width:" Foreground="White"/>
+						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="64"/>
+					</StackPanel>
+				</Grid>
+			</DockPanel>
+		</SplitView.Pane>
+		<VirtualizedGrid Margin="20" Items="{Binding Items}" ItemWidth="{Binding Value, ElementName=xe_WidthSlider}" ItemHeight="{Binding Value, ElementName=xe_HeightSlider}" MaxItemsInRow="{Binding MaxColumns}">
+			<VirtualizedGrid.ItemTemplate>
+				<DataTemplate>
+					<Border BorderBrush="Green" BorderThickness="2" CornerRadius="4">
+						<TextBlock Text="Hello there!" TextTrimming="CharacterEllipsis"/>
+					</Border>
+				</DataTemplate>
+			</VirtualizedGrid.ItemTemplate>
+		</VirtualizedGrid>
+	</SplitView>
+
 </UserControl>
