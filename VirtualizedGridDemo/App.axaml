@@ -6,5 +6,6 @@
 
     <Application.Styles>
         <FluentTheme />
+		<StyleInclude Source="avares://VirtualizedGrid/VirtualizedGrid.axaml" />
     </Application.Styles>
 </Application>

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:VirtualizedGridDemo.ViewModels"
 			 xmlns:converters="clr-namespace:VirtualizedGridDemo.Converters"
+			 xmlns:controls="clr-namespace:VirtualizedGridDemo.Controls"
 			 xmlns:g="using:VirtualizedGrid"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="VirtualizedGridDemo.Views.MainView"
@@ -99,9 +100,7 @@
 		<g:VirtualizedGrid Margin="20" Items="{Binding Items}" ItemWidth="{Binding Value, ElementName=xe_WidthSlider}" ItemHeight="{Binding Value, ElementName=xe_HeightSlider}" MaxItemsInRow="{Binding MaxColumns}">
 			<g:VirtualizedGrid.ItemTemplate>
 				<DataTemplate>
-					<Border BorderBrush="Green" BorderThickness="2" CornerRadius="4">
-						<TextBlock Text="Hello there!" TextTrimming="CharacterEllipsis"/>
-					</Border>
+					<controls:GridItem />
 				</DataTemplate>
 			</g:VirtualizedGrid.ItemTemplate>
 		</g:VirtualizedGrid>

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using System.Collections;
 using System.Collections.Specialized;
 
@@ -10,6 +11,8 @@ namespace VirtualizedGrid
 {
     public class VirtualizedGrid : TemplatedControl
     {
+        private bool _isTemplateApplied;
+
         private ScrollViewer PART_ScrollViewer = null!;
         private ScrollViewer PART_ClipScrollViewer = null!;
         private Border PART_InnerCanvas = null!;
@@ -74,13 +77,19 @@ namespace VirtualizedGrid
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
-            PART_ScrollViewer = e.NameScope.Find<ScrollViewer>(nameof(PART_ScrollViewer));
-            PART_ClipScrollViewer = e.NameScope.Find<ScrollViewer>(nameof(PART_ClipScrollViewer));
-            PART_InnerCanvas = e.NameScope.Find<Border>(nameof(PART_InnerCanvas));
-            PART_ItemsGrid = e.NameScope.Find<Grid>(nameof(PART_ItemsGrid));
+            PART_ScrollViewer = e.NameScope.Find<ScrollViewer>(nameof(PART_ScrollViewer)) ??
+                throw new NullReferenceException(nameof(PART_ScrollViewer));
+            PART_ClipScrollViewer = e.NameScope.Find<ScrollViewer>(nameof(PART_ClipScrollViewer)) ??
+                throw new NullReferenceException(nameof(PART_ClipScrollViewer));
+            PART_InnerCanvas = e.NameScope.Find<Border>(nameof(PART_InnerCanvas)) ??
+                throw new NullReferenceException(nameof(PART_InnerCanvas));
+            PART_ItemsGrid = e.NameScope.Find<Grid>(nameof(PART_ItemsGrid)) ??
+                throw new NullReferenceException(nameof(PART_ItemsGrid));
 
             PART_ScrollViewer.ScrollChanged += ScrollChanged;
             LayoutUpdated += (s, e) => UpdateState();
+
+            _isTemplateApplied = true;
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -130,9 +139,12 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdateState()
         {
-            UpdateGrid();
-            UpdateScrollViewerBoundaries();
-            UpdatViewportDataContext();
+            if (_isTemplateApplied)
+            {
+                UpdateGrid();
+                UpdateScrollViewerBoundaries();
+                UpdatViewportDataContext();
+            }
         }
 
         /// <summary>
@@ -374,10 +386,25 @@ namespace VirtualizedGrid
             newItem.SetValue(Grid.RowProperty, y);
             newItem.SetValue(ContentPresenter.ContentTemplateProperty, ItemTemplate);
 
+            newItem.PointerWheelChanged += (s, e) =>
+            {
+                e.Handled = true;
+                HandleOffsetWhenScrollOnItem(e.Delta);
+            };
+
             PutItem(renderedControls, x, y, newItem);
             PART_ItemsGrid.Children.Add(newItem);
         }
 
+        /// <summary>
+        /// Updates the offset of main ScrollViewer using input data from clip ScrollViewer.
+        /// </summary>
+        /// <param name="delta"></param>
+        private void HandleOffsetWhenScrollOnItem(Vector delta)
+        {
+            // TODO
+            PART_ScrollViewer.Offset -= delta * 25;
+        }
 
         private static void LoopThrough<T>(List<List<T>> nestedList, Action<T, int, int> action)
         {
