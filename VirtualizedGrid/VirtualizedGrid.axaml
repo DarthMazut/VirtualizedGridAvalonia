@@ -16,7 +16,14 @@
 				  <Border x:Name="PART_InnerCanvas"/>
 			  </ScrollViewer>
 			  <ScrollViewer x:Name="PART_ClipScrollViewer" Margin="0,0,20,20" Background="{x:Null}" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-				  <Grid x:Name="PART_ItemsGrid" Background="{x:Null}" />
+				  <!--<Grid x:Name="PART_ItemsGrid" Background="{x:Null}" />-->
+				  <ItemsControl x:Name="PART_ItemsControl" ItemTemplate="{TemplateBinding ItemTemplate}" Background="{x:Null}" ItemsSource="{TemplateBinding RenderedItems}" HorizontalAlignment="Left" VerticalAlignment="Top">
+					  <ItemsControl.ItemsPanel>
+						  <ItemsPanelTemplate>
+							  <controls:SimpleGrid x:Name="PART_UniformGridPanel" Background="{x:Null}" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+						  </ItemsPanelTemplate>
+					  </ItemsControl.ItemsPanel>
+				  </ItemsControl>
 			  </ScrollViewer>
 		  </Grid>
       </ControlTemplate>
