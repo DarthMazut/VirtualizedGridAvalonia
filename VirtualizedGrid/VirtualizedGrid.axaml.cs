@@ -155,36 +155,83 @@ namespace VirtualizedGrid
         }
 
         /// <summary>
-        /// Ensures that number of rendered controls is matching the current state.
+        /// Update state of ItemsControl.
         /// </summary>
         private void UpdateItemsControl()
         {
-            int numberToRender = ResolveMaxHorizontalVisibleItems() * ResolveMaxVerticalVisibleItems();
-            if (numberToRender > PART_ItemsControl.Items.Count)
+            UpdateItemsControlItems();
+            UpdateItemsControlProperties();
+        }
+
+        /// <summary>
+        /// Ensures that number of rendered controls is matching the current state.
+        /// </summary>
+        private void UpdateItemsControlItems()
+        {
+            SimpleGrid panel = (PART_ItemsControl?.ItemsPanelRoot as SimpleGrid)!;
+
+            int numberOfColumnsToRender = ResolveMaxHorizontalVisibleItems();
+            int numberOfRowsToRender = ResolveMaxVerticalVisibleItems();
+            int currentColumnNumber = panel.MaxElementsInRow;
+            int currentRowNumber = (int)Math.Ceiling((double)panel.Children.Count / panel.MaxElementsInRow);
+
+            if (currentRowNumber < 0) return;
+
+            if (currentColumnNumber < numberOfColumnsToRender)
             {
-                int numberToAdd = numberToRender - PART_ItemsControl.Items.Count;
-                Enumerable.Range(0, numberToAdd)
-                    .Select(i => CreateItem())
-                    .ToList()
-                    .ForEach(c =>
-                    {
-                        _renderedControls.Add(c);
-                        PART_ItemsControl.Items.Add(c);
-                    });
-            }
-            
-            if (numberToRender < PART_ItemsControl.Items.Count)
-            {
-                int currentNumber = PART_ItemsControl.Items.Count;
-                int numberToRemove = currentNumber - numberToRender;
-                for (int i = currentNumber - 1; i >= currentNumber - numberToRemove; i--)
+                int numberOfColumnsToAdd = numberOfColumnsToRender - currentColumnNumber;
+                for (int row = currentRowNumber; row > 0; row--)
                 {
-                    _renderedControls.RemoveAt(i);
-                    PART_ItemsControl.Items.RemoveAt(i);
+                    for (int i = 0; i < numberOfColumnsToAdd; i++)
+                    {
+                        //Width * rowNumber - 1
+                        StyledElement newItem = CreateItem();
+                        PART_ItemsControl.Items.Insert(currentColumnNumber * row - 1 + i, newItem);
+                        _renderedControls.Insert(currentColumnNumber * row - 1 + i, newItem);
+                    }
                 }
             }
 
-            UpdateItemsControlProperties();
+            if (currentColumnNumber > numberOfColumnsToRender)
+            {
+                int numberOfColumnsToRemove = currentColumnNumber - numberOfColumnsToRender;
+                for (int row = currentRowNumber; row > 0; row--)
+                {
+                    for (int i = 0; i < numberOfColumnsToRemove; i++)
+                    {
+                        //Width * rowNumber - 1
+                        PART_ItemsControl.Items.RemoveAt(currentColumnNumber * row - 1 - i);
+                        _renderedControls.RemoveAt(currentColumnNumber * row - 1 - i);
+                    }
+                }
+            }
+
+            if (currentRowNumber < numberOfRowsToRender)
+            {
+                int numberOfRowsToAdd = numberOfRowsToRender - currentRowNumber;
+                for (int row = 0; row < numberOfRowsToAdd; row++)
+                {
+                    for (int i = 0; i < numberOfColumnsToRender; i++)
+                    {
+                        StyledElement newItem = CreateItem();
+                        PART_ItemsControl.Items.Add(newItem);
+                        _renderedControls.Add(newItem);
+                    }
+                }
+            }
+
+            if (currentRowNumber > numberOfRowsToRender)
+            {
+                int numberOfRowsToRemove = currentRowNumber - numberOfRowsToRender;
+                for (int row = 0; row < numberOfRowsToRemove; row++)
+                {
+                    for (int i = 0; i < numberOfColumnsToRender; i++)
+                    {
+                        PART_ItemsControl.Items.RemoveAt(PART_ItemsControl.ItemCount - 1);
+                        _renderedControls.RemoveAt(_renderedControls.Count - 1);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -236,10 +283,10 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            if (DateTimeOffset.UtcNow - _lastUpdateTimestamp < TimeSpan.FromMilliseconds(1000))
-            {
-                return;
-            }
+            //if (DateTimeOffset.UtcNow - _lastUpdateTimestamp < TimeSpan.FromMilliseconds(1000))
+            //{
+            //    return;
+            //}
 
             int width = ResolveMaxHorizontalVisibleItems();
             for (int i = 0; i < _renderedControls.Count; i++)
@@ -264,7 +311,7 @@ namespace VirtualizedGrid
                 }
             }
 
-            _lastUpdateTimestamp = DateTimeOffset.UtcNow;
+            //_lastUpdateTimestamp = DateTimeOffset.UtcNow;
         }
 
         /// <summary>
