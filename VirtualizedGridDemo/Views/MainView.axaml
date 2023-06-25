@@ -89,15 +89,20 @@
 				<Grid IsVisible="{Binding IsChecked, ElementName=xe_PaneButton}" Margin="8,0,8,0">
 					<StackPanel Spacing="4">
 						<TextBlock Text="Item height:" Foreground="White"/>
-						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="35"/>
+						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="120"/>
 						<Border Height="10"/>
 						<TextBlock Text="Item width:" Foreground="White"/>
-						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="35"/>
+						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="120"/>
 					</StackPanel>
 				</Grid>
 			</DockPanel>
 		</SplitView.Pane>
-		<g:VirtualizedGrid Margin="20" Items="{Binding Items}" ItemWidth="{Binding Value, ElementName=xe_WidthSlider}" ItemHeight="{Binding Value, ElementName=xe_HeightSlider}" MaxItemsInRow="{Binding MaxColumns}">
+		<g:VirtualizedGrid 
+			Margin="20"
+			Items="{Binding Items}"
+			ItemWidth="{Binding Value, ElementName=xe_WidthSlider}"
+			ItemHeight="{Binding Value, ElementName=xe_HeightSlider}"
+			MaxItemsInRow="{Binding MaxColumns}">
 			<g:VirtualizedGrid.ItemTemplate>
 				<DataTemplate>
 					<controls:GridItem />

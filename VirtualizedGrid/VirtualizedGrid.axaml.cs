@@ -7,7 +7,9 @@ using Avalonia.Input;
 using Avalonia.Markup.Xaml.Templates;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 
@@ -16,15 +18,14 @@ namespace VirtualizedGrid
     public class VirtualizedGrid : TemplatedControl
     {
         private bool _isTemplateApplied;
+        private DateTimeOffset _lastUpdateTimestamp;
 
         private ScrollViewer PART_ScrollViewer = null!;
         private ScrollViewer PART_ClipScrollViewer = null!;
         private Border PART_InnerCanvas = null!;
         private ItemsControl PART_ItemsControl = null!;
-        private SimpleGrid PART_UniformGridPanel = null!;
 
-        //private List<List<StyledElement?>> renderedControls = new();
-        //private ObservableCollection<StyledElement?> _renderedControls = new();
+        private List<StyledElement?> _renderedControls = new();
 
         public static readonly StyledProperty<double> ItemHeightProperty =
             AvaloniaProperty.Register<VirtualizedGrid, double>(nameof(ItemHeight), 64);
@@ -43,16 +44,6 @@ namespace VirtualizedGrid
 
         public static readonly StyledProperty<bool> DisableSmoothScrollingProperty =
             AvaloniaProperty.Register<VirtualizedGrid, bool>(nameof(DisableSmoothScrolling));
-
-        // DEBUG
-        internal static readonly StyledProperty<ObservableCollection<object>> RenderedItemsProperty =
-            AvaloniaProperty.Register<VirtualizedGrid, ObservableCollection<object>>(nameof(RenderedItems), new());
-        internal ObservableCollection<object> RenderedItems
-        {
-            get => GetValue(RenderedItemsProperty);
-            set => SetValue(RenderedItemsProperty, value);
-        }
-        //DEBUG
 
         public double ItemHeight
         {
@@ -102,7 +93,6 @@ namespace VirtualizedGrid
             PART_ItemsControl = e.NameScope.Find<ItemsControl>(nameof(PART_ItemsControl)) ??
                 throw new NullReferenceException(nameof(PART_ItemsControl));
 
-            //PART_ItemsControl.ItemsSource = _renderedControls;
             PART_ScrollViewer.ScrollChanged += ScrollChanged;
             LayoutUpdated += (s, e) => UpdateState();
 
@@ -158,39 +148,29 @@ namespace VirtualizedGrid
         {
             if (_isTemplateApplied)
             {
-                PART_UniformGridPanel = (PART_ItemsControl.ItemsPanelRoot as SimpleGrid)!;
-
                 UpdateItemsControl();
                 UpdateScrollViewerBoundaries();
                 UpdatViewportDataContext();
             }
         }
 
+        /// <summary>
+        /// Ensures that number of rendered controls is matching the current state.
+        /// </summary>
         private void UpdateItemsControl()
         {
             int numberToRender = ResolveMaxHorizontalVisibleItems() * ResolveMaxVerticalVisibleItems();
             if (numberToRender > PART_ItemsControl.Items.Count)
             {
                 int numberToAdd = numberToRender - PART_ItemsControl.Items.Count;
-                //Enumerable.Range(0, numberToAdd)
-                //    .Select(i => CreateItem())
-                //    .ToList()
-                //    .ForEach(c => PART_ItemsControl.Items.Add(c));
                 Enumerable.Range(0, numberToAdd)
                     .Select(i => CreateItem())
                     .ToList()
-                    .ForEach(c => RenderedItems.Add(new object()));
-                //PART_ItemsControl.Items.LastOrDefault()?.
-                //var child = PART_UniformGridPanel
-                //    .GetVisualChildren()
-                //    .FirstOrDefault(c => c.DataContext == PART_ItemsControl.Items.LastOrDefault());
-
-                //PART_UniformGridPanel.Visual
-                //(child as ContentPresenter).PointerWheelChanged += (s, e) =>
-                //{
-                //    e.Handled = true;
-                //    HandleOffsetWhenScrollOnItem(e.Delta);
-                //};
+                    .ForEach(c =>
+                    {
+                        _renderedControls.Add(c);
+                        PART_ItemsControl.Items.Add(c);
+                    });
             }
             
             if (numberToRender < PART_ItemsControl.Items.Count)
@@ -199,29 +179,50 @@ namespace VirtualizedGrid
                 int numberToRemove = currentNumber - numberToRender;
                 for (int i = currentNumber - 1; i >= currentNumber - numberToRemove; i--)
                 {
-                    //PART_ItemsControl.Items.RemoveAt(i);
-                    //_renderedControls[i].DataContext = null;
-                    //(_renderedControls[i] as ContentPresenter).DataTemplates.Clear();
-                    RenderedItems.RemoveAt(i);
+                    _renderedControls.RemoveAt(i);
+                    PART_ItemsControl.Items.RemoveAt(i);
                 }
             }
 
-            if (PART_UniformGridPanel.MaxElementsInRow != ResolveMaxHorizontalVisibleItems())
-            {
-                PART_UniformGridPanel.MaxElementsInRow = ResolveMaxHorizontalVisibleItems();
-            }
-
-            PART_UniformGridPanel.ItemWidth = ItemWidth;
-            PART_UniformGridPanel.ItemHeight = ItemHeight;
+            UpdateItemsControlProperties();
         }
 
         /// <summary>
-        /// Ensures that number of rendered controls is matching the current state.
+        /// Updates dimension properties of panel which contains rendered items.
         /// </summary>
-        private void UpdateGrid()
+        private void UpdateItemsControlProperties()
         {
-            //UpdateColumns();
-            //UpdateRows();
+            SimpleGrid? simpleGridPanel = PART_ItemsControl?.ItemsPanelRoot as SimpleGrid;
+            if (simpleGridPanel != null)
+            {
+                if (simpleGridPanel.MaxElementsInRow != ResolveMaxHorizontalVisibleItems())
+                {
+                    simpleGridPanel.MaxElementsInRow = ResolveMaxHorizontalVisibleItems();
+                }
+
+                bool shouldUpdateControls = false;
+
+                if (simpleGridPanel.ItemHeight != ItemHeight)
+                {
+                    simpleGridPanel.ItemHeight = ItemHeight;
+                    shouldUpdateControls = true;
+                }
+
+                if (simpleGridPanel.ItemWidth != ItemWidth)
+                {
+                    simpleGridPanel.ItemWidth = ItemWidth;
+                    shouldUpdateControls = true;
+                }
+
+                if (shouldUpdateControls)
+                {
+                    foreach (StyledElement? control in _renderedControls)
+                    {
+                        control?.SetValue(HeightProperty, ItemHeight);
+                        control?.SetValue(WidthProperty, ItemWidth);
+                    }
+                }
+            }
         }
 
         private void UpdateScrollViewerBoundaries()
@@ -235,23 +236,35 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            //LoopThrough(renderedControls, (control, x, y) =>
-            //{
-            //    if (control is not null)
-            //    {
-            //        int itemCoordX = ResolveHorizontalItemsOffset() + x;
-            //        int itemCoordY = ResolveVerticalItemOffset() + y;
+            if (DateTimeOffset.UtcNow - _lastUpdateTimestamp < TimeSpan.FromMilliseconds(1000))
+            {
+                return;
+            }
 
-            //        // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
-            //        // Here we ignore this one additional item
-            //        if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
-            //        {
-            //            return;
-            //        }
+            int width = ResolveMaxHorizontalVisibleItems();
+            for (int i = 0; i < _renderedControls.Count; i++)
+            {
+                int y = i / width;
+                int x = i % width;
+                StyledElement? control = _renderedControls[i];
 
-            //        control.DataContext = GetItem(itemCoordX, itemCoordY);
-            //    }
-            //});
+                if (control is not null)
+                {
+                    int itemCoordX = ResolveHorizontalItemsOffset() + x;
+                    int itemCoordY = ResolveVerticalItemOffset() + y;
+
+                    // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
+                    // Here we ignore this one additional item
+                    if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
+                    {
+                        continue;
+                    }
+
+                    control.DataContext = GetItem(itemCoordX, itemCoordY);
+                }
+            }
+
+            _lastUpdateTimestamp = DateTimeOffset.UtcNow;
         }
 
         /// <summary>
@@ -319,15 +332,15 @@ namespace VirtualizedGrid
         private StyledElement CreateItem()
         {
             ContentPresenter newItem = new();
-            //newItem.SetValue(ContentPresenter.ContentTemplateProperty, ItemTemplate);
+            newItem.SetValue(ContentPresenter.ContentTemplateProperty, ItemTemplate);
             newItem.SetValue(ContentPresenter.HeightProperty, ItemHeight);
             newItem.SetValue(ContentPresenter.WidthProperty, ItemWidth);
 
-            //newItem.PointerWheelChanged += (s, e) =>
-            //{
-            //    e.Handled = true;
-            //    HandleOffsetWhenScrollOnItem(e.Delta);
-            //};
+            newItem.PointerWheelChanged += (s, e) =>
+            {
+                e.Handled = true;
+                HandleOffsetWhenScrollOnItem(e.Delta);
+            };
 
             return newItem;
         }
@@ -340,29 +353,6 @@ namespace VirtualizedGrid
         {
             // TODO
             PART_ScrollViewer.Offset -= delta * 25;
-        }
-
-        private static void LoopThrough<T>(List<List<T>> nestedList, Action<T, int, int> action)
-        {
-            for (int y = 0; y < nestedList.Count; y++)
-            {
-                for (int x = 0; x < nestedList[y].Count; x++)
-                {
-                    action.Invoke(nestedList[y][x], x, y);
-                }
-            }
-        }
-
-        private static void LoopThroughAsTwoDiemension<T>(IList<T> list, int width, Action<T, int, int> action)
-        {
-            for (int i = 0; i < list.Count; i++)
-            {
-                int y = i / width;
-                int x = i % width;
-                T item = list[i];
-
-                action.Invoke(item, x, y);
-            }
         }
 
         private object? GetItem(int x, int y)
