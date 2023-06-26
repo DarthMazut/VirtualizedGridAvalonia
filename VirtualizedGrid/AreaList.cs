@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -86,29 +87,86 @@ namespace VirtualizedGrid
 
         public void Add(T item) => _internalList.Add(item);
 
-        public void AddColumn(Func<int, int, int, T> elementBuilder) => AddColumns(1, elementBuilder);
-
-        public void AddColumns(int numberOfColumnsToAdd, Func<int, int, int, T> elementBuilder)
+        public void AddColumns(int numberOfColumnsToAdd, Func<Point, int, T> elementBuilder)
         {
+            FillGapWithBuilder(elementBuilder);
 
-        }
-
-        public void AddRow(Func<int, int, int, T> elementBuilder) => AddRows(1, elementBuilder);
-
-        public void AddRows(int numberOfRowsToAdd, Func<int, int, int, T> elementBuilder)
-        {
-            if (!IsRectangular)
+            for (int row = Height; row > 0; row--)
             {
-                int missingItems = Count % Width;
-                for (int i = 0; i < missingItems; i++)
+                for (int i = 0; i < numberOfColumnsToAdd; i++)
                 {
-                    int index = Count;
-                    (int x, int y) coords = IndexToCoords(index);
-                    _internalList.Add(elementBuilder.Invoke(coords.x, coords.y, index));
+                    int index = row * Width - 1 + i;
+                    Point coords = IndexToCoords(index);
+                    _internalList.Insert(index, elementBuilder.Invoke(coords, index));
                 }
             }
 
+            WidthConstraint += numberOfColumnsToAdd;
+        }
 
+        public T[] RemoveColumns(int numberOfColumnsToRemove)
+        {
+            List<T> removedItems = new();
+
+            for (int row = Height; row > 0; row--)
+            {
+                for (int i = 0; i < numberOfColumnsToRemove; i++)
+                {
+                    int indexToRemove = row * Width - 1 + i;
+                    if (indexToRemove < Count)
+                    {
+                        removedItems.Add(_internalList[indexToRemove]);
+                        _internalList.RemoveAt(indexToRemove);
+                    }
+                }
+            }
+
+            WidthConstraint -= numberOfColumnsToRemove;
+            return removedItems.ToArray();
+        }
+
+
+        public void AddRows(int numberOfRowsToAdd, Func<Point, int, T> elementBuilder)
+        {
+            FillGapWithBuilder(elementBuilder);
+
+            int numberOfItemsToAdd = numberOfRowsToAdd * WidthConstraint;
+            for (int i = 0; i < numberOfItemsToAdd; i++)
+            {
+                AddItemWithBuilder(elementBuilder);
+            }
+        }
+
+        public T[] RemoveRows(int numberOfRowsToRemove)
+        {
+            int rowsToStay = Height - numberOfRowsToRemove;
+            int numberOfItemsToRemove = Count - rowsToStay * Width;
+            T[] removedItems = new T[numberOfItemsToRemove];
+
+            for (int i = 0; i < numberOfItemsToRemove; i++)
+            {
+                int indexToRemove = Count - 1;
+                removedItems[i] = _internalList[indexToRemove];
+                _internalList.RemoveAt(indexToRemove);
+            }
+
+            return removedItems;
+        }
+
+        private void FillGapWithBuilder(Func<Point, int, T> elementBuilder)
+        {
+            int missingItems = Count % Width;
+            for (int i = 0; i < missingItems; i++)
+            {
+                AddItemWithBuilder(elementBuilder);
+            }
+        }
+
+        private void AddItemWithBuilder(Func<Point, int, T> elementBuilder)
+        {
+            int index = Count;
+            Point coords = IndexToCoords(index);
+            _internalList.Add(elementBuilder.Invoke(coords, index));
         }
 
         public IList<T> AsSingleDimension() => _internalList.ToList();
@@ -137,7 +195,7 @@ namespace VirtualizedGrid
 
         private int CoordsToIndex(int x, int y) => y * Width + x;
 
-        private (int x, int y) IndexToCoords(int index) => (index % Width, index / Width);
+        private Point IndexToCoords(int index) => new Point(index % Width, index / Width);
     }
 
     internal enum DimensionConstraint
