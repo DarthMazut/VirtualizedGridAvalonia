@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using Coords = System.Drawing.Point;
 
 namespace VirtualizedGrid
 {
@@ -25,7 +26,8 @@ namespace VirtualizedGrid
         private Border PART_InnerCanvas = null!;
         private ItemsControl PART_ItemsControl = null!;
 
-        private List<StyledElement?> _renderedControls = new();
+        //private List<StyledElement?> _renderedControls = new();
+        private List2D<StyledElement?> _renderedControls = new(1);
 
         public static readonly StyledProperty<double> ItemHeightProperty =
             AvaloniaProperty.Register<VirtualizedGrid, double>(nameof(ItemHeight), 64);
@@ -169,60 +171,54 @@ namespace VirtualizedGrid
         private void UpdateItemsControlItems()
         {
             SimpleGrid panel = (PART_ItemsControl?.ItemsPanelRoot as SimpleGrid)!;
+            List2D itemsControlItems = new(PART_ItemsControl.Items, _renderedControls.Constraint);
 
             int numberOfColumnsToRender = ResolveMaxHorizontalVisibleItems();
             int numberOfRowsToRender = ResolveMaxVerticalVisibleItems();
-            int currentColumnNumber = panel.MaxElementsInRow;
-            int currentRowNumber = (int)Math.Ceiling((double)panel.Children.Count / panel.MaxElementsInRow);
-
-            if (currentRowNumber < 0) return;
+            int currentColumnNumber = _renderedControls.Width;
+            int currentRowNumber = _renderedControls.Height;
 
             if (currentColumnNumber < numberOfColumnsToRender)
             {
                 int numberOfColumnsToAdd = numberOfColumnsToRender - currentColumnNumber;
-                for (int row = currentRowNumber - 1; row >= 0; row--)
+                _renderedControls.AddColumns(numberOfColumnsToAdd, (coords, index) =>
                 {
-                    for (int i = 0; i < numberOfColumnsToAdd; i++)
-                    {
-                        StyledElement newItem = CreateItem();
-                        PART_ItemsControl.Items.Insert((row + 1) * currentColumnNumber - 1, newItem);
-                        _renderedControls.Insert((row + 1) * currentColumnNumber - 1, newItem);
-                    }
-                }
+                    StyledElement newItem = CreateItem();
+                    PART_ItemsControl.Items.Insert(index, newItem);
+                    return newItem;
+                });
+                itemsControlItems.Constraint = _renderedControls.Constraint;
+
             }
 
             if (currentColumnNumber > numberOfColumnsToRender)
             {
                 int numberOfColumnsToRemove = currentColumnNumber - numberOfColumnsToRender;
-                for (int row = currentRowNumber - 1; row >= 0; row--)
-                {
-                    for (int i = 0; i < numberOfColumnsToRemove; i++)
-                    {
-                        PART_ItemsControl.Items.RemoveAt((row + 1) * currentColumnNumber - 1 - (numberOfColumnsToRemove - 1));
-                        _renderedControls.RemoveAt((row + 1) * currentColumnNumber - 1 - (numberOfColumnsToRemove - 1));
-                    }
-                }
+                _renderedControls.RemoveColumns(numberOfColumnsToRemove);
+                itemsControlItems.RemoveColumns(numberOfColumnsToRemove);
             }
+
+            numberOfColumnsToRender = ResolveMaxHorizontalVisibleItems();
+            numberOfRowsToRender = ResolveMaxVerticalVisibleItems();
+            currentColumnNumber = _renderedControls.Width;
+            currentRowNumber = _renderedControls.Height;
 
             if (currentRowNumber < numberOfRowsToRender)
             {
                 int numberOfRowsToAdd = numberOfRowsToRender - currentRowNumber;
-                for (int i = 0; i < numberOfRowsToAdd * numberOfColumnsToRender; i++)
+                _renderedControls.AddRows(numberOfRowsToAdd, (coords, index) =>
                 {
                     StyledElement newItem = CreateItem();
                     PART_ItemsControl.Items.Add(newItem);
-                    _renderedControls.Add(newItem);
-                }
+                    return newItem;
+                });
             }
 
             if (currentRowNumber > numberOfRowsToRender)
             {
                 int numberOfRowsToRemove = currentRowNumber - numberOfRowsToRender;
-                for (int i = 0; i < numberOfRowsToRemove * numberOfColumnsToRender; i++)
-                {
-                    PART_ItemsControl.Items.RemoveAt(PART_ItemsControl.ItemCount - 1);
-                    _renderedControls.RemoveAt(_renderedControls.Count - 1);
-                }
+                _renderedControls.RemoveRows(numberOfRowsToRemove);
+                itemsControlItems.RemoveRows(numberOfRowsToRemove);
             }
         }
 
@@ -234,9 +230,9 @@ namespace VirtualizedGrid
             SimpleGrid? simpleGridPanel = PART_ItemsControl?.ItemsPanelRoot as SimpleGrid;
             if (simpleGridPanel != null)
             {
-                if (simpleGridPanel.MaxElementsInRow != ResolveMaxHorizontalVisibleItems())
+                if (simpleGridPanel.MaxElementsInRow != _renderedControls.Constraint)
                 {
-                    simpleGridPanel.MaxElementsInRow = ResolveMaxHorizontalVisibleItems();
+                    simpleGridPanel.MaxElementsInRow = _renderedControls.Constraint;
                 }
 
                 bool shouldUpdateControls = false;
@@ -280,28 +276,28 @@ namespace VirtualizedGrid
             //    return;
             //}
 
-            //int width = ResolveMaxHorizontalVisibleItems();
-            //for (int i = 0; i < _renderedControls.Count; i++)
-            //{
-            //    int y = i / width;
-            //    int x = i % width;
-            //    StyledElement? control = _renderedControls[i];
+            int width = ResolveMaxHorizontalVisibleItems();
+            for (int i = 0; i < _renderedControls.Count; i++)
+            {
+                int y = i / width;
+                int x = i % width;
+                StyledElement? control = _renderedControls[i];
 
-            //    if (control is not null)
-            //    {
-            //        int itemCoordX = ResolveHorizontalItemsOffset() + x;
-            //        int itemCoordY = ResolveVerticalItemOffset() + y;
+                if (control is not null)
+                {
+                    int itemCoordX = ResolveHorizontalItemsOffset() + x;
+                    int itemCoordY = ResolveVerticalItemOffset() + y;
 
-            //        // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
-            //        // Here we ignore this one additional item
-            //        if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
-            //        {
-            //            continue;
-            //        }
+                    // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
+                    // Here we ignore this one additional item
+                    if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
+                    {
+                        continue;
+                    }
 
-            //        control.DataContext = GetItem(itemCoordX, itemCoordY);
-            //    }
-            //}
+                    control.DataContext = GetItem(itemCoordX, itemCoordY);
+                }
+            }
 
             //_lastUpdateTimestamp = DateTimeOffset.UtcNow;
         }
