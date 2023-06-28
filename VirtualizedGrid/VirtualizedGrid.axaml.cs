@@ -4,6 +4,8 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Media.TextFormatting.Unicode;
+using Avalonia.Threading;
 using System.Collections;
 using System.Collections.Specialized;
 
@@ -134,6 +136,9 @@ namespace VirtualizedGrid
             UpdatViewportDataContext();
         }
 
+        DateTimeOffset _updateTime = DateTimeOffset.MinValue;
+        Task? _updateTask = null;
+
         /// <summary>
         /// Updates rendered items, theirs data context and scroll bars to reflect current state.
         /// </summary>
@@ -141,19 +146,50 @@ namespace VirtualizedGrid
         {
             if (_isTemplateApplied)
             {
-                UpdateGrid();
-                UpdateScrollViewerBoundaries();
-                UpdatViewportDataContext();
+                ScheduleOrPostponeUpdate();
+            }
+        }
+
+        private void ScheduleOrPostponeUpdate()
+        {
+            if (_updateTask is null)
+            {
+                // Schedule
+                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(500);
+                _updateTask = Task.Run(async () => 
+                {
+                    bool stop = false;
+                    while(!stop)
+                    {
+                        await Task.Delay(50);
+                        if (DateTimeOffset.UtcNow > _updateTime)
+                        {
+                            await Dispatcher.UIThread.Invoke(async () => 
+                            {
+                                await UpdateGrid();
+                                UpdateScrollViewerBoundaries();
+                                UpdatViewportDataContext();
+                                _updateTask = null;
+                                stop = true;
+                            }, DispatcherPriority.Background);
+                        }
+                    }
+                });
+            }
+            else
+            {
+                // Postpone
+                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(500);
             }
         }
 
         /// <summary>
         /// Ensures that number of rendered controls is matching the current state.
         /// </summary>
-        private void UpdateGrid()
+        private async Task UpdateGrid()
         {
-            UpdateColumns();
-            UpdateRows();
+            await UpdateColumns();
+            await UpdateRows();
         }
 
         private void UpdateScrollViewerBoundaries()
@@ -167,23 +203,23 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            LoopThrough(renderedControls, (control, x, y) =>
-            {
-                if (control is not null)
-                {
-                    int itemCoordX = ResolveHorizontalItemsOffset() + x;
-                    int itemCoordY = ResolveVerticalItemOffset() + y;
+            //LoopThrough(renderedControls, (control, x, y) =>
+            //{
+            //    if (control is not null)
+            //    {
+            //        int itemCoordX = ResolveHorizontalItemsOffset() + x;
+            //        int itemCoordY = ResolveVerticalItemOffset() + y;
 
-                    // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
-                    // Here we ignore this one additional item
-                    if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
-                    {
-                        return;
-                    }
+            //        // At the very end of scrolling we're exceeding by one (because of Smooth scrolling)
+            //        // Here we ignore this one additional item
+            //        if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
+            //        {
+            //            return;
+            //        }
 
-                    control.DataContext = GetItem(itemCoordX, itemCoordY);
-                }
-            });
+            //        control.DataContext = GetItem(itemCoordX, itemCoordY);
+            //    }
+            //});
         }
 
         /// <summary>
@@ -248,7 +284,7 @@ namespace VirtualizedGrid
             return itemsCount;
         }
 
-        private void UpdateColumns()
+        private async Task UpdateColumns()
         {
             int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
             int expectedColumnsNumber = ResolveMaxHorizontalVisibleItems();
@@ -257,7 +293,7 @@ namespace VirtualizedGrid
 
             if (currentColumnsNumber < expectedColumnsNumber)
             {
-                AddColumns(expectedColumnsNumber - currentColumnsNumber);
+                await AddColumns(expectedColumnsNumber - currentColumnsNumber);
             }
 
             if (currentColumnsNumber > expectedColumnsNumber)
@@ -266,7 +302,7 @@ namespace VirtualizedGrid
             }
         }
 
-        private void UpdateRows()
+        private async Task UpdateRows()
         {
             int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
             int expectedRowsNumber = ResolveMaxVerticalVisibleItems();
@@ -275,7 +311,7 @@ namespace VirtualizedGrid
 
             if (currentRowsNumber < expectedRowsNumber)
             {
-                AddRows(expectedRowsNumber - currentRowsNumber);
+                await AddRows(expectedRowsNumber - currentRowsNumber);
             }
 
             if (currentRowsNumber > expectedRowsNumber)
@@ -306,7 +342,7 @@ namespace VirtualizedGrid
             }
         }
 
-        private void AddColumns(int numberToAdd)
+        private async Task AddColumns(int numberToAdd)
         {
             int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
             int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
@@ -314,6 +350,7 @@ namespace VirtualizedGrid
             for (int i = 0; i < numberToAdd; i++)
             {
                 PART_ItemsGrid.ColumnDefinitions.Add(new ColumnDefinition(ItemWidth, GridUnitType.Pixel));
+                //if (i % 5 == 0) await Task.Yield();
                 for (int j = 0; j < currentRowsNumber; j++)
                 {
                     // Render controls for newly created column
@@ -322,7 +359,7 @@ namespace VirtualizedGrid
             }
         }
 
-        private void AddRows(int numberToAdd)
+        private async Task AddRows(int numberToAdd)
         {
             int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
             int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
@@ -330,6 +367,8 @@ namespace VirtualizedGrid
             for (int i = 0; i < numberToAdd; i++)
             {
                 PART_ItemsGrid.RowDefinitions.Add(new RowDefinition(ItemHeight, GridUnitType.Pixel));
+                //if (i % 5 == 0)
+                await Task.Yield();
                 for (int j = 0; j < currentColumnsNumber; j++)
                 {
                     // Render controls for newly created row
@@ -378,6 +417,8 @@ namespace VirtualizedGrid
             PART_ItemsGrid.RowDefinitions.RemoveRange(expectedRowsNumber, numberToRemove);
         }
 
+        private Random _rnd = new();
+
         private void CreateItem(int x, int y)
         {
             ContentPresenter newItem = new();
@@ -385,6 +426,10 @@ namespace VirtualizedGrid
             newItem.SetValue(Grid.ColumnProperty, x);
             newItem.SetValue(Grid.RowProperty, y);
             newItem.SetValue(ContentPresenter.ContentTemplateProperty, ItemTemplate);
+            //if (_rnd.Next(100) < 90)
+            //{
+            //    newItem.SetValue(IsVisibleProperty, false);
+            //}
 
             newItem.PointerWheelChanged += (s, e) =>
             {

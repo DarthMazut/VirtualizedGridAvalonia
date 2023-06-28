@@ -89,10 +89,10 @@
 				<Grid IsVisible="{Binding IsChecked, ElementName=xe_PaneButton}" Margin="8,0,8,0">
 					<StackPanel Spacing="4">
 						<TextBlock Text="Item height:" Foreground="White"/>
-						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="64"/>
+						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="35"/>
 						<Border Height="10"/>
 						<TextBlock Text="Item width:" Foreground="White"/>
-						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="64"/>
+						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="35"/>
 					</StackPanel>
 				</Grid>
 			</DockPanel>
