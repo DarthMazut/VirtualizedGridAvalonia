@@ -38,6 +38,9 @@ namespace VirtualizedGrid
         public static readonly StyledProperty<bool> DisableSmoothScrollingProperty =
             AvaloniaProperty.Register<VirtualizedGrid, bool>(nameof(DisableSmoothScrolling));
 
+        public static readonly StyledProperty<int> MaxItemsCacheProperty =
+            AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(MaxItemsCache), defaultValue: 1024);
+
         public double ItemHeight
         {
             get => GetValue(ItemHeightProperty);
@@ -72,6 +75,12 @@ namespace VirtualizedGrid
         {
             get => GetValue(DisableSmoothScrollingProperty);
             set => SetValue(DisableSmoothScrollingProperty, value);
+        }
+
+        public int MaxItemsCache
+        {
+            get => GetValue(MaxItemsCacheProperty);
+            set => SetValue(MaxItemsCacheProperty, value);
         }
 
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -338,13 +347,22 @@ namespace VirtualizedGrid
             }
         }
 
+        // JE¯ELI expected < viewPort TO ignoruj cache
+        // JE¯ELI current > expected + cache TO usuñ kolumnê
+
+        // ColumnsToRemove = (CurrentItems - ExpectedItems - Cache)/H
+        // ColumnsToRemove = (CurrentColumns * H - expectedColumns * H - Cache) / H
+
         private void RemoveColumns(int numberToRemove)
         {
             int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
             int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
             int expectedColumnsNumber = currentColumnsNumber - numberToRemove;
 
-            for (int i = 0; i < numberToRemove; i++)
+            int columnsToRemove = (int)Math.Ceiling((double)(currentColumnsNumber * currentRowsNumber - expectedColumnsNumber * currentRowsNumber - MaxItemsCache)/currentRowsNumber);
+            expectedColumnsNumber = currentColumnsNumber - columnsToRemove;
+
+            for (int i = 0; i < columnsToRemove; i++)
             {
                 for (int j = 0; j < currentRowsNumber; j++)
                 {
@@ -355,7 +373,7 @@ namespace VirtualizedGrid
             List<Control> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.ColumnProperty) >= expectedColumnsNumber).ToList();
             PART_ItemsGrid.Children.RemoveAll(childrenToRemove);
 
-            PART_ItemsGrid.ColumnDefinitions.RemoveRange(expectedColumnsNumber, numberToRemove);
+            PART_ItemsGrid.ColumnDefinitions.RemoveRange(expectedColumnsNumber, columnsToRemove);
         }
 
         private void RemoveRows(int numberToRemove)
