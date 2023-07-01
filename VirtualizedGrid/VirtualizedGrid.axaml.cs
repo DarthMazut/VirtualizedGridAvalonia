@@ -4,6 +4,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Media;
 using System.Collections;
 using System.Collections.Specialized;
 
@@ -16,7 +17,7 @@ namespace VirtualizedGrid
         private ScrollViewer PART_ScrollViewer = null!;
         private ScrollViewer PART_ClipScrollViewer = null!;
         private Border PART_InnerCanvas = null!;
-        private Grid PART_ItemsGrid = null!;
+        private Canvas PART_ItemsCanvas = null!;
 
         private List<List<StyledElement?>> renderedControls = new();
 
@@ -83,8 +84,8 @@ namespace VirtualizedGrid
                 throw new NullReferenceException(nameof(PART_ClipScrollViewer));
             PART_InnerCanvas = e.NameScope.Find<Border>(nameof(PART_InnerCanvas)) ??
                 throw new NullReferenceException(nameof(PART_InnerCanvas));
-            PART_ItemsGrid = e.NameScope.Find<Grid>(nameof(PART_ItemsGrid)) ??
-                throw new NullReferenceException(nameof(PART_ItemsGrid));
+            PART_ItemsCanvas = e.NameScope.Find<Canvas>(nameof(PART_ItemsCanvas)) ??
+                throw new NullReferenceException(nameof(PART_ItemsCanvas));
 
             PART_ScrollViewer.ScrollChanged += ScrollChanged;
             LayoutUpdated += (s, e) => UpdateState();
@@ -115,6 +116,7 @@ namespace VirtualizedGrid
                 change.Property.Name == nameof(ItemHeight) ||
                 change.Property.Name == nameof(ItemWidth))
             {
+                UpdateItemsDimensions();
                 UpdateState();
             }
         }
@@ -154,6 +156,124 @@ namespace VirtualizedGrid
         {
             UpdateColumns();
             UpdateRows();
+            PART_ItemsCanvas.Width = GetNumberOfRenderedItemsHorizontally() * ItemWidth;
+            PART_ItemsCanvas.Height = GetNumberOfRenderedItemsVertically() * ItemHeight;
+        }
+
+        private void UpdateColumns()
+        {
+            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+            int expectedColumnsNumber = ResolveMaxHorizontalVisibleItems();
+
+            if (currentColumnsNumber < expectedColumnsNumber)
+            {
+                AddColumns(expectedColumnsNumber - currentColumnsNumber);
+            }
+
+            if (currentColumnsNumber > expectedColumnsNumber)
+            {
+                RemoveColumns(currentColumnsNumber - expectedColumnsNumber);
+            }
+        }
+
+        private void UpdateRows()
+        {
+            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
+            int expectedRowsNumber = ResolveMaxVerticalVisibleItems();
+
+            if (currentRowsNumber < expectedRowsNumber)
+            {
+                AddRows(expectedRowsNumber - currentRowsNumber);
+            }
+
+            if (currentRowsNumber > expectedRowsNumber)
+            {
+                RemoveRows(currentRowsNumber - expectedRowsNumber);
+            }
+        }
+
+        /// <summary>
+        /// Updates width and height of all rendered items.
+        /// </summary>
+        private void UpdateItemsDimensions()
+        {
+            LoopThrough(renderedControls, (item, x, y) =>
+            {
+                item?.SetValue(HeightProperty, ItemHeight);
+                item?.SetValue(WidthProperty, ItemWidth);
+                item?.SetValue(Canvas.LeftProperty, x * ItemWidth);
+                item?.SetValue(Canvas.TopProperty, y * ItemHeight);
+            });
+        }
+
+        private void AddColumns(int numberToAdd)
+        {
+            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
+            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+            
+            //DEBUG
+            if (currentRowsNumber == 0) currentRowsNumber = 1;
+            //DEBUG
+
+            for (int i = 0; i < numberToAdd; i++)
+            {
+                for (int j = 0; j < currentRowsNumber; j++)
+                {
+                    // Render controls for newly created column
+                    CreateItem(currentColumnsNumber + i, j);
+                }
+            }
+        }
+
+        private void AddRows(int numberToAdd)
+        {
+            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
+            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+
+            for (int i = 0; i < numberToAdd; i++)
+            {
+                for (int j = 0; j < currentColumnsNumber; j++)
+                {
+                    // Render controls for newly created row
+                    CreateItem(j, currentRowsNumber + i);
+                }
+            }
+        }
+
+        private void RemoveColumns(int numberToRemove)
+        {
+            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
+            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+            int expectedColumnsNumber = currentColumnsNumber - numberToRemove;
+
+            for (int i = 0; i < numberToRemove; i++)
+            {
+                for (int j = 0; j < currentRowsNumber; j++)
+                {
+                    PutItem(renderedControls, expectedColumnsNumber + i, j, default);
+                }
+            }
+
+            List<Control> childrenToRemove = PART_ItemsCanvas.Children.Where(c => c.GetValue(Canvas.LeftProperty) >= expectedColumnsNumber * ItemWidth).ToList();
+            PART_ItemsCanvas.Children.RemoveAll(childrenToRemove);
+        }
+
+        private void RemoveRows(int numberToRemove)
+        {
+            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
+            int expectedRowsNumber = currentRowsNumber - numberToRemove;
+
+            for (int i = 0; i < numberToRemove; i++)
+            {
+                for (int j = 0; j < currentColumnsNumber; j++)
+                {
+                    PutItem(renderedControls, j, expectedRowsNumber + i, default);
+                }
+            }
+
+            List<Control> childrenToRemove = PART_ItemsCanvas.Children.Where(c => c.GetValue(Canvas.TopProperty) >= expectedRowsNumber * ItemHeight).ToList();
+            PART_ItemsCanvas.Children.RemoveAll(childrenToRemove);
         }
 
         private void UpdateScrollViewerBoundaries()
@@ -186,204 +306,14 @@ namespace VirtualizedGrid
             });
         }
 
-        /// <summary>
-        /// Calculates how many items from the left edge is current viewport (area with rendered <see cref="IControl"/>s). 
-        /// </summary>
-        private int ResolveHorizontalItemsOffset()
-        {
-            return (int)(PART_ScrollViewer.Offset.X / ItemWidth);
-        }
-
-        /// <summary>
-        /// Calculates how many items from the top edge is current viewport (area with rendered <see cref="IControl"/>s). 
-        /// </summary>
-        private int ResolveVerticalItemOffset()
-        {
-            return (int)(PART_ScrollViewer.Offset.Y / ItemHeight);
-        }
-
-        /// <summary>
-        /// Calculates how many <see cref="IControl"/>s should be rendered horizontaly.
-        /// </summary>
-        private int ResolveMaxHorizontalVisibleItems()
-        {
-            // How many items can fit in current viewport?
-            int itemsCount = (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Width / ItemWidth);
-
-            // Exceed viewport by one to enable smooth scrolling
-            if (!DisableSmoothScrolling)
-            {
-                itemsCount++;
-            }
-
-            // If we can render more than we'd like to actually display we'll render only what is required
-            if (itemsCount > GetItemsNumberX())
-            {
-                itemsCount = GetItemsNumberX();
-            }
-
-            return itemsCount;
-        }
-
-        /// <summary>
-        /// Calculates how many <see cref="IControl"/>s should be rendered verticaly.
-        /// </summary
-        private int ResolveMaxVerticalVisibleItems()
-        {
-            // How many items can fit in current viewport?
-            int itemsCount = (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Height / ItemHeight);
-
-            // Exceed viewport by one to enable smooth scrolling
-            if (!DisableSmoothScrolling)
-            {
-                itemsCount++;
-            }
-
-            // If we can render more than we'd like to actually display we'll render only what is required
-            if (itemsCount > GetItemsNumberY())
-            {
-                itemsCount = GetItemsNumberY();
-            }
-
-            return itemsCount;
-        }
-
-        private void UpdateColumns()
-        {
-            int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
-            int expectedColumnsNumber = ResolveMaxHorizontalVisibleItems();
-
-            UpdateColumnsWidth();
-
-            if (currentColumnsNumber < expectedColumnsNumber)
-            {
-                AddColumns(expectedColumnsNumber - currentColumnsNumber);
-            }
-
-            if (currentColumnsNumber > expectedColumnsNumber)
-            {
-                RemoveColumns(currentColumnsNumber - expectedColumnsNumber);
-            }
-        }
-
-        private void UpdateRows()
-        {
-            int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
-            int expectedRowsNumber = ResolveMaxVerticalVisibleItems();
-
-            UpdateRowsHeight();
-
-            if (currentRowsNumber < expectedRowsNumber)
-            {
-                AddRows(expectedRowsNumber - currentRowsNumber);
-            }
-
-            if (currentRowsNumber > expectedRowsNumber)
-            {
-                RemoveRows(currentRowsNumber - expectedRowsNumber);
-            }
-        }
-
-        /// <summary>
-        /// Updates width of all available columns to reflect <see cref="ItemWidth"/> value.
-        /// </summary>
-        private void UpdateColumnsWidth()
-        {
-            foreach (ColumnDefinition columnDefinition in PART_ItemsGrid.ColumnDefinitions)
-            {
-                columnDefinition.Width = new GridLength(ItemWidth, GridUnitType.Pixel);
-            }
-        }
-
-        /// <summary>
-        /// Updates htight of all available rows to reflect <see cref="ItemHeight"/> value.
-        /// </summary>
-        private void UpdateRowsHeight()
-        {
-            foreach (RowDefinition rowDefinition in PART_ItemsGrid.RowDefinitions)
-            {
-                rowDefinition.Height = new GridLength(ItemHeight, GridUnitType.Pixel);
-            }
-        }
-
-        private void AddColumns(int numberToAdd)
-        {
-            int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
-            int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
-
-            for (int i = 0; i < numberToAdd; i++)
-            {
-                PART_ItemsGrid.ColumnDefinitions.Add(new ColumnDefinition(ItemWidth, GridUnitType.Pixel));
-                for (int j = 0; j < currentRowsNumber; j++)
-                {
-                    // Render controls for newly created column
-                    CreateItem(currentColumnsNumber + i, j);
-                }
-            }
-        }
-
-        private void AddRows(int numberToAdd)
-        {
-            int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
-            int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
-
-            for (int i = 0; i < numberToAdd; i++)
-            {
-                PART_ItemsGrid.RowDefinitions.Add(new RowDefinition(ItemHeight, GridUnitType.Pixel));
-                for (int j = 0; j < currentColumnsNumber; j++)
-                {
-                    // Render controls for newly created row
-                    CreateItem(j, currentRowsNumber + i);
-                }
-            }
-        }
-
-        private void RemoveColumns(int numberToRemove)
-        {
-            int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
-            int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
-            int expectedColumnsNumber = currentColumnsNumber - numberToRemove;
-
-            for (int i = 0; i < numberToRemove; i++)
-            {
-                for (int j = 0; j < currentRowsNumber; j++)
-                {
-                    PutItem(renderedControls, expectedColumnsNumber + i, j, default);
-                }
-            }
-
-            List<Control> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.ColumnProperty) >= expectedColumnsNumber).ToList();
-            PART_ItemsGrid.Children.RemoveAll(childrenToRemove);
-
-            PART_ItemsGrid.ColumnDefinitions.RemoveRange(expectedColumnsNumber, numberToRemove);
-        }
-
-        private void RemoveRows(int numberToRemove)
-        {
-            int currentColumnsNumber = PART_ItemsGrid.ColumnDefinitions.Count;
-            int currentRowsNumber = PART_ItemsGrid.RowDefinitions.Count;
-            int expectedRowsNumber = currentRowsNumber - numberToRemove;
-
-            for (int i = 0; i < numberToRemove; i++)
-            {
-                for (int j = 0; j < currentColumnsNumber; j++)
-                {
-                    PutItem(renderedControls, j, expectedRowsNumber + i, default);
-                }
-            }
-
-            List<Control> childrenToRemove = PART_ItemsGrid.Children.Where(c => c.GetValue(Grid.RowProperty) >= expectedRowsNumber).ToList();
-            PART_ItemsGrid.Children.RemoveAll(childrenToRemove);
-
-            PART_ItemsGrid.RowDefinitions.RemoveRange(expectedRowsNumber, numberToRemove);
-        }
-
         private void CreateItem(int x, int y)
         {
             ContentPresenter newItem = new();
 
-            newItem.SetValue(Grid.ColumnProperty, x);
-            newItem.SetValue(Grid.RowProperty, y);
+            newItem.SetValue(Canvas.LeftProperty, x * ItemWidth);
+            newItem.SetValue(Canvas.TopProperty, y * ItemHeight);
+            newItem.SetValue(WidthProperty, ItemWidth);
+            newItem.SetValue(HeightProperty, ItemHeight);
             newItem.SetValue(ContentPresenter.ContentTemplateProperty, ItemTemplate);
 
             newItem.PointerWheelChanged += (s, e) =>
@@ -393,7 +323,7 @@ namespace VirtualizedGrid
             };
 
             PutItem(renderedControls, x, y, newItem);
-            PART_ItemsGrid.Children.Add(newItem);
+            PART_ItemsCanvas.Children.Add(newItem);
         }
 
         /// <summary>
@@ -462,8 +392,83 @@ namespace VirtualizedGrid
             return Items[index];
         }
 
+        private int GetNumberOfRenderedItemsHorizontally()
+            => renderedControls.FirstOrDefault()?.Count(i => i is not null) ?? 0;
+
+        private int GetNumberOfRenderedItemsVertically()
+            => renderedControls.Count(row => row.FirstOrDefault() is not null);
+
+        /// <summary>
+        /// Calculates how many items from the left edge is current viewport (area with rendered <see cref="IControl"/>s). 
+        /// </summary>
+        private int ResolveHorizontalItemsOffset()
+        {
+            return (int)(PART_ScrollViewer.Offset.X / ItemWidth);
+        }
+
+        /// <summary>
+        /// Calculates how many items from the top edge is current viewport (area with rendered <see cref="IControl"/>s). 
+        /// </summary>
+        private int ResolveVerticalItemOffset()
+        {
+            return (int)(PART_ScrollViewer.Offset.Y / ItemHeight);
+        }
+
+        /// <summary>
+        /// Calculates how many <see cref="IControl"/>s should be rendered horizontaly.
+        /// </summary>
+        private int ResolveMaxHorizontalVisibleItems()
+        {
+            // How many items can fit in current viewport?
+            int itemsCount = (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Width / ItemWidth);
+
+            // Exceed viewport by one to enable smooth scrolling
+            if (!DisableSmoothScrolling)
+            {
+                itemsCount++;
+            }
+
+            // If we can render more than we'd like to actually display we'll render only what is required
+            if (itemsCount > GetItemsNumberX())
+            {
+                itemsCount = GetItemsNumberX();
+            }
+
+            return itemsCount;
+        }
+
+        /// <summary>
+        /// Calculates how many <see cref="IControl"/>s should be rendered verticaly.
+        /// </summary
+        private int ResolveMaxVerticalVisibleItems()
+        {
+            // How many items can fit in current viewport?
+            int itemsCount = (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Height / ItemHeight);
+
+            // Exceed viewport by one to enable smooth scrolling
+            if (!DisableSmoothScrolling)
+            {
+                itemsCount++;
+            }
+
+            // If we can render more than we'd like to actually display we'll render only what is required
+            if (itemsCount > GetItemsNumberY())
+            {
+                itemsCount = GetItemsNumberY();
+            }
+
+            return itemsCount;
+        }
+
+
+        /// <summary>
+        /// Returns number of elements in row for <see cref="Items"/> collection treated as 2D array.
+        /// </summary>
         private int GetItemsNumberX() => Items.Count < MaxItemsInRow ? Items.Count : MaxItemsInRow;
 
+        /// <summary>
+        /// Returns number of elements in column for <see cref="Items"/> collection treated as 2D array.
+        /// </summary>
         private int GetItemsNumberY() => (int)Math.Ceiling((double)Items.Count / MaxItemsInRow);
     }
 }

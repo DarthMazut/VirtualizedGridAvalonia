@@ -16,7 +16,7 @@
 				  <Border x:Name="PART_InnerCanvas"/>
 			  </ScrollViewer>
 			  <ScrollViewer x:Name="PART_ClipScrollViewer" Margin="0,0,20,20" Background="{x:Null}" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-				  <Grid x:Name="PART_ItemsGrid" Background="{x:Null}" />
+				  <Canvas x:Name="PART_ItemsCanvas" Background="{x:Null}" HorizontalAlignment="Left" VerticalAlignment="Top" />
 			  </ScrollViewer>
 		  </Grid>
       </ControlTemplate>
