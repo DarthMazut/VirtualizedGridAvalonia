@@ -143,21 +143,20 @@ namespace VirtualizedGrid
         {
             if (_isTemplateApplied)
             {
-                UpdateGrid();
+                UpdateItemsCanvas();
                 UpdateScrollViewerBoundaries();
                 UpdatViewportDataContext();
             }
         }
 
         /// <summary>
-        /// Ensures that number of rendered controls is matching the current state.
+        /// Ensures that number of rendered controls and canvas dimensions are matching the current state.
         /// </summary>
-        private void UpdateGrid()
+        private void UpdateItemsCanvas()
         {
             UpdateColumns();
             UpdateRows();
-            PART_ItemsCanvas.Width = GetNumberOfRenderedItemsHorizontally() * ItemWidth;
-            PART_ItemsCanvas.Height = GetNumberOfRenderedItemsVertically() * ItemHeight;
+            UpdateItemsCanvasDimensions();
         }
 
         private void UpdateColumns()
@@ -204,6 +203,12 @@ namespace VirtualizedGrid
                 item?.SetValue(Canvas.LeftProperty, x * ItemWidth);
                 item?.SetValue(Canvas.TopProperty, y * ItemHeight);
             });
+        }
+
+        private void UpdateItemsCanvasDimensions()
+        {
+            PART_ItemsCanvas.Width = GetNumberOfRenderedItemsHorizontally() * ItemWidth;
+            PART_ItemsCanvas.Height = GetNumberOfRenderedItemsVertically() * ItemHeight;
         }
 
         private void AddColumns(int numberToAdd)
