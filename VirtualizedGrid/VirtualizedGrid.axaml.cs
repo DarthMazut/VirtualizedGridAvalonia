@@ -19,7 +19,7 @@ namespace VirtualizedGrid
         private Border PART_InnerCanvas = null!;
         private Canvas PART_ItemsCanvas = null!;
 
-        private List<List<StyledElement?>> renderedControls = new();
+        private List<List<Control>> _renderedControls = new();
 
         public static readonly StyledProperty<double> ItemHeightProperty =
             AvaloniaProperty.Register<VirtualizedGrid, double>(nameof(ItemHeight), 64);
@@ -196,7 +196,7 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdateItemsDimensions()
         {
-            LoopThrough(renderedControls, (item, x, y) =>
+            LoopThrough(_renderedControls, (item, x, y) =>
             {
                 item?.SetValue(HeightProperty, ItemHeight);
                 item?.SetValue(WidthProperty, ItemWidth);
@@ -213,72 +213,68 @@ namespace VirtualizedGrid
 
         private void AddColumns(int numberToAdd)
         {
-            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
-            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
-            
-            //DEBUG
-            if (currentRowsNumber == 0) currentRowsNumber = 1;
-            //DEBUG
+            List<Control> elementsToAdd = new();
 
-            for (int i = 0; i < numberToAdd; i++)
+            for (int y = 0; y < _renderedControls.Count; y++)
             {
-                for (int j = 0; j < currentRowsNumber; j++)
+                int currentRowNewIndex = _renderedControls[y].Count;
+                for (int x = currentRowNewIndex; x < currentRowNewIndex + numberToAdd; x++)
                 {
-                    // Render controls for newly created column
-                    CreateItem(currentColumnsNumber + i, j);
+                    Control newItem = CreateItem(x, y);
+                    _renderedControls[y].Add(newItem);
+                    elementsToAdd.Add(newItem);
                 }
             }
+
+            PART_ItemsCanvas.Children.AddRange(elementsToAdd);
         }
 
         private void AddRows(int numberToAdd)
         {
-            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
-            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
+            List<Control> elementsToAdd = new();
 
-            for (int i = 0; i < numberToAdd; i++)
+            for (int row = 0; row < numberToAdd; row++)
             {
-                for (int j = 0; j < currentColumnsNumber; j++)
+                int y = _renderedControls.Count;
+                List<Control> newRow = new();
+                for (int x = 0; x < _renderedControls.FirstOrDefault()?.Count; x++)
                 {
-                    // Render controls for newly created row
-                    CreateItem(j, currentRowsNumber + i);
+                    Control newItem = CreateItem(x, y);
+                    newRow.Add(newItem);
+                    elementsToAdd.Add(newItem);
                 }
+
+                _renderedControls.Add(newRow);
             }
+
+            PART_ItemsCanvas.Children.AddRange(elementsToAdd);
         }
 
         private void RemoveColumns(int numberToRemove)
         {
-            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
-            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
-            int expectedColumnsNumber = currentColumnsNumber - numberToRemove;
+            List<Control> elementsToRemove = new();
 
-            for (int i = 0; i < numberToRemove; i++)
+            for (int y = 0; y < _renderedControls.Count; y++)
             {
-                for (int j = 0; j < currentRowsNumber; j++)
+                int currentRowBaseIndex = _renderedControls[y].Count - numberToRemove;
+                for (int x = currentRowBaseIndex; x < currentRowBaseIndex + numberToRemove; x++)
                 {
-                    PutItem(renderedControls, expectedColumnsNumber + i, j, default);
+                    elementsToRemove.Add(_renderedControls[y][x]);
                 }
+
+                _renderedControls[y].RemoveRange(currentRowBaseIndex, numberToRemove);
             }
 
-            List<Control> childrenToRemove = PART_ItemsCanvas.Children.Where(c => c.GetValue(Canvas.LeftProperty) >= expectedColumnsNumber * ItemWidth).ToList();
-            PART_ItemsCanvas.Children.RemoveAll(childrenToRemove);
+            PART_ItemsCanvas.Children.RemoveAll(elementsToRemove);
         }
 
         private void RemoveRows(int numberToRemove)
         {
-            int currentColumnsNumber = GetNumberOfRenderedItemsHorizontally();
-            int currentRowsNumber = GetNumberOfRenderedItemsVertically();
-            int expectedRowsNumber = currentRowsNumber - numberToRemove;
+            List<Control> elementsToRemove = _renderedControls.TakeLast(numberToRemove).SelectMany(y => y).ToList();
 
-            for (int i = 0; i < numberToRemove; i++)
-            {
-                for (int j = 0; j < currentColumnsNumber; j++)
-                {
-                    PutItem(renderedControls, j, expectedRowsNumber + i, default);
-                }
-            }
+            _renderedControls.RemoveRange(_renderedControls.Count - numberToRemove, numberToRemove);
 
-            List<Control> childrenToRemove = PART_ItemsCanvas.Children.Where(c => c.GetValue(Canvas.TopProperty) >= expectedRowsNumber * ItemHeight).ToList();
-            PART_ItemsCanvas.Children.RemoveAll(childrenToRemove);
+            PART_ItemsCanvas.Children.RemoveAll(elementsToRemove);
         }
 
         private void UpdateScrollViewerBoundaries()
@@ -292,7 +288,7 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            LoopThrough(renderedControls, (control, x, y) =>
+            LoopThrough(_renderedControls, (control, x, y) =>
             {
                 if (control is not null)
                 {
@@ -311,7 +307,7 @@ namespace VirtualizedGrid
             });
         }
 
-        private void CreateItem(int x, int y)
+        private Control CreateItem(int x, int y)
         {
             ContentPresenter newItem = new();
 
@@ -327,8 +323,7 @@ namespace VirtualizedGrid
                 HandleOffsetWhenScrollOnItem(e.Delta);
             };
 
-            PutItem(renderedControls, x, y, newItem);
-            PART_ItemsCanvas.Children.Add(newItem);
+            return newItem;
         }
 
         /// <summary>
@@ -364,28 +359,6 @@ namespace VirtualizedGrid
             }
         }
 
-        private static void PutItem<T>(List<List<T?>> nestedList, int x, int y, T item)
-        {
-            if (nestedList.Count > y)
-            {
-                if (nestedList[y].Count > x)
-                {
-                    nestedList[y][x] = item;
-                }
-                else
-                {
-                    nestedList[y].AddRange(Enumerable.Repeat(default(T), x - nestedList[y].Count + 1));
-                    nestedList[y][x] = item;
-                }
-            }
-            else
-            {
-                nestedList.AddRange(Enumerable.Repeat(new List<T?>(), y - nestedList.Count + 1));
-                nestedList[y].AddRange(Enumerable.Repeat(default(T), x - nestedList[y].Count + 1));
-                nestedList[y][x] = item;
-            }
-        }
-
         private object? GetItem(int x, int y)
         {
             int index = y * GetItemsNumberX() + x;
@@ -397,11 +370,9 @@ namespace VirtualizedGrid
             return Items[index];
         }
 
-        private int GetNumberOfRenderedItemsHorizontally()
-            => renderedControls.FirstOrDefault()?.Count(i => i is not null) ?? 0;
+        private int GetNumberOfRenderedItemsHorizontally() => _renderedControls.FirstOrDefault()?.Count ?? 0;
 
-        private int GetNumberOfRenderedItemsVertically()
-            => renderedControls.Count(row => row.FirstOrDefault() is not null);
+        private int GetNumberOfRenderedItemsVertically() => _renderedControls.Count;
 
         /// <summary>
         /// Calculates how many items from the left edge is current viewport (area with rendered <see cref="IControl"/>s). 
