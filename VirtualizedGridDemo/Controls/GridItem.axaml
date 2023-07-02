@@ -3,12 +3,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="VirtualizedGridDemo.Controls.GridItem">
+             x:Class="VirtualizedGridDemo.Controls.GridItem"
+			 IsVisible="{Binding Visible}">
 	<Grid ColumnDefinitions="*,*" RowDefinitions="*,*" Background="MediumSeaGreen" Margin="5">
 		<StackPanel Grid.RowSpan="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center">
 			<TextBlock Text="{Binding Text}" Foreground="Black" />
 			<CheckBox IsChecked="{Binding IsChecked}" />
-			<ScrollViewer />
 		</StackPanel>
 	</Grid>
 </UserControl>

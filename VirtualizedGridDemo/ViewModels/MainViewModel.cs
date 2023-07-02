@@ -1,10 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.ObjectModel;
 
 namespace VirtualizedGridDemo.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
+    private static readonly Random _rnd = new();
+
     [ObservableProperty]
     private ObservableCollection<GridItemVM> _items = new();
 
@@ -17,7 +20,8 @@ public partial class MainViewModel : ViewModelBase
         {
             for (int x = 0; x < 1000; x++)
             {
-                _items.Add(new GridItemVM(x, y));
+                GridItemVM newItem = new(x, y);
+                _items.Add(newItem);
             }
         }
     }

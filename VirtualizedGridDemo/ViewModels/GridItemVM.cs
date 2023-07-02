@@ -17,6 +17,9 @@ namespace VirtualizedGridDemo.ViewModels
         [ObservableProperty]
         private bool _isChecked;
 
+        [ObservableProperty]
+        private bool _visible = true;
+
         public GridItemVM(int x, int y)
         {
             _x = x;
