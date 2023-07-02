@@ -196,13 +196,17 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdateItemsDimensions()
         {
-            LoopThrough(_renderedControls, (item, x, y) =>
+            for (int y = 0; y < _renderedControls.Count; y++)
             {
-                item?.SetValue(HeightProperty, ItemHeight);
-                item?.SetValue(WidthProperty, ItemWidth);
-                item?.SetValue(Canvas.LeftProperty, x * ItemWidth);
-                item?.SetValue(Canvas.TopProperty, y * ItemHeight);
-            });
+                for (int x = 0; x < _renderedControls[y].Count; x++)
+                {
+                    Control item = _renderedControls[y][x];
+                    item.SetValue(HeightProperty, ItemHeight);
+                    item.SetValue(WidthProperty, ItemWidth);
+                    item.SetValue(Canvas.LeftProperty, x * ItemWidth);
+                    item.SetValue(Canvas.TopProperty, y * ItemHeight);
+                }
+            }
         }
 
         private void UpdateItemsCanvasDimensions()
@@ -288,10 +292,11 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            LoopThrough(_renderedControls, (control, x, y) =>
+            for (int y = 0; y < _renderedControls.Count; y++)
             {
-                if (control is not null)
+                for (int x = 0; x < _renderedControls[y].Count; x++)
                 {
+                    Control control = _renderedControls[y][x];
                     int itemCoordX = ResolveHorizontalItemsOffset() + x;
                     int itemCoordY = ResolveVerticalItemOffset() + y;
 
@@ -299,12 +304,12 @@ namespace VirtualizedGrid
                     // Here we ignore this one additional item
                     if (itemCoordX >= GetItemsNumberX() || itemCoordY >= GetItemsNumberY())
                     {
-                        return;
+                        continue;
                     }
 
                     control.DataContext = GetItem(itemCoordX, itemCoordY);
                 }
-            });
+            }
         }
 
         private Control CreateItem(int x, int y)
@@ -334,29 +339,6 @@ namespace VirtualizedGrid
         {
             // TODO
             PART_ScrollViewer.Offset -= delta * 25;
-        }
-
-        private static void LoopThrough<T>(List<List<T>> nestedList, Action<T, int, int> action)
-        {
-            for (int y = 0; y < nestedList.Count; y++)
-            {
-                for (int x = 0; x < nestedList[y].Count; x++)
-                {
-                    action.Invoke(nestedList[y][x], x, y);
-                }
-            }
-        }
-
-        private static void LoopThroughAsTwoDiemension<T>(IList<T> list, int width, Action<T, int, int> action)
-        {
-            for (int i = 0; i < list.Count; i++)
-            {
-                int y = i / width;
-                int x = i % width;
-                T item = list[i];
-
-                action.Invoke(item, x, y);
-            }
         }
 
         private object? GetItem(int x, int y)
