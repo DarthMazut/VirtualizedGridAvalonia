@@ -131,6 +131,22 @@
 								<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="35"/>
 							</StackPanel>
 						</StackPanel>
+						
+						<!-- DIAGNOSTICS -->
+						<StackPanel Spacing="8">
+							<TextBlock Text="Diagnostics:" Classes="SettingsHeader" HorizontalAlignment="Center" />
+							<StackPanel>
+								<TextBlock Text="{Binding ManagedMemoryUsed, StringFormat='Managed heap size: \{0:#,0\} MB'}" />
+								<TextBlock Text="{Binding TotalMemoryUsed, StringFormat='Total memory usage: \{0:#,0\} MB'}" />
+							</StackPanel>
+						</StackPanel>
+						
+						<!-- PERFORMANCE -->
+						<StackPanel>
+							<TextBlock Text="Performance:" Classes="SettingsHeader" HorizontalAlignment="Center" />
+						</StackPanel>
+						
+						
 					</StackPanel>
 				</ScrollViewer>
 			</DockPanel>

@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace VirtualizedGridDemo.ViewModels;
 
@@ -31,11 +33,15 @@ public partial class MainViewModel : ViewModelBase
 
     public int PendingItems => ItemsHorizontally * ItemsVertically;
 
+    public double ManagedMemoryUsed => (double)GC.GetTotalMemory(true) / (1024 * 1024);
+
+    public double TotalMemoryUsed => (double)Process.GetCurrentProcess().PrivateMemorySize64 / (1024 * 1024);
+
     public MainViewModel()
     {
         Apply();
+        ScheduleMemoryStateUpdate();
     }
-
 
     [RelayCommand(CanExecute = nameof(CanResetOrApply))]
     private void Reset()
@@ -64,4 +70,17 @@ public partial class MainViewModel : ViewModelBase
     }
 
     private bool CanResetOrApply() => PendingItems != Items.Count;
+
+    private void ScheduleMemoryStateUpdate()
+    {
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(500);
+                OnPropertyChanged(nameof(ManagedMemoryUsed));
+                OnPropertyChanged(nameof(TotalMemoryUsed));
+            }
+        });
+    }
 }
