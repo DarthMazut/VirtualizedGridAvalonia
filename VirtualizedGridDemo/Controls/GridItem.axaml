@@ -5,10 +5,10 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="VirtualizedGridDemo.Controls.GridItem"
 			 IsVisible="{Binding Visible}">
-	<Grid ColumnDefinitions="*,*" RowDefinitions="*,*" Background="MediumSeaGreen" Margin="5">
-		<StackPanel Grid.RowSpan="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center">
-			<TextBlock Text="{Binding Text}" Foreground="Black" />
-			<CheckBox IsChecked="{Binding IsChecked}" />
-		</StackPanel>
-	</Grid>
+	<Border Background="MediumSeaGreen" Margin="4" BorderThickness="2" BorderBrush="Green">
+		<Canvas>
+			<TextBlock Text="{Binding Text}" Foreground="Black" Canvas.Top="5" Canvas.Left="0" />
+			<!--<CheckBox IsChecked="{Binding IsChecked}" />-->
+		</Canvas>
+	</Border>
 </UserControl>

@@ -1,6 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace VirtualizedGridDemo.ViewModels;
 
@@ -12,17 +15,53 @@ public partial class MainViewModel : ViewModelBase
     private ObservableCollection<GridItemVM> _items = new();
 
     [ObservableProperty]
-    private int _maxColumns = 1000;
+    [NotifyPropertyChangedFor(nameof(PendingItems))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResetCommand))]
+    private int _itemsHorizontally = 1000;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PendingItems))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResetCommand))]
+    private int _itemsVertically = 1000;
+
+    [ObservableProperty]
+    private int _maxItemsInRow = 1000;
+
+    public int PendingItems => ItemsHorizontally * ItemsVertically;
 
     public MainViewModel()
     {
-        for (int y = 0; y < 1000; y++)
+        Apply();
+    }
+
+
+    [RelayCommand(CanExecute = nameof(CanResetOrApply))]
+    private void Reset()
+    {
+        ItemsHorizontally = MaxItemsInRow;
+        ItemsVertically = Items.Count / MaxItemsInRow;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanResetOrApply))]
+    private void Apply()
+    {
+        List<GridItemVM> newItems = new();
+        for (int y = 0; y < ItemsVertically; y++)
         {
-            for (int x = 0; x < 1000; x++)
+            for (int x = 0; x < ItemsHorizontally; x++)
             {
                 GridItemVM newItem = new(x, y);
-                _items.Add(newItem);
+                newItems.Add(newItem);
             }
         }
+
+        Items = new ObservableCollection<GridItemVM>(newItems);
+        MaxItemsInRow = ItemsHorizontally;
+        ApplyCommand.NotifyCanExecuteChanged();
+        ResetCommand.NotifyCanExecuteChanged();
     }
+
+    private bool CanResetOrApply() => PendingItems != Items.Count;
 }

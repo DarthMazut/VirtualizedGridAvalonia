@@ -36,6 +36,12 @@
 			<Setter Property="BorderBrush" Value="White" />
 			<Setter Property="TextBlock.Foreground" Value="White" />
 		</Style>
+
+		<Style Selector="TextBlock.SettingsHeader">
+			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="FontSize" Value="22"/>
+			<Setter Property="Margin" Value="0,0,0,3" />
+		</Style>
 	</UserControl.Styles>
 
 	<SplitView
@@ -86,24 +92,57 @@
 							Text="{Binding IsChecked, ElementName=xe_PinButton, Converter={StaticResource PinConverter}}"/>
 					</ToggleButton>
 				</StackPanel>
-				<Grid IsVisible="{Binding IsChecked, ElementName=xe_PaneButton}" Margin="8,0,8,0">
-					<StackPanel Spacing="4">
-						<Grid ColumnDefinitions="*,Auto">
-							<TextBlock Text="Item height:" Foreground="White"/>
-							<TextBlock Grid.Column="1" Text="{Binding Value, ElementName=xe_HeightSlider, StringFormat='[\{0:0\}]'}" />
-						</Grid>
-						<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="35" />
-						<Border Height="10"/>
-						<Grid ColumnDefinitions="*,Auto">
-							<TextBlock Text="Item width:" Foreground="White"/>
-							<TextBlock Grid.Column="1" Text="{Binding Value, ElementName=xe_WidthSlider, StringFormat='[\{0:0\}]'}" />
-						</Grid>
-						<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="35"/>
+				<ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="0,0,22,0" IsVisible="{Binding IsChecked, ElementName=xe_PaneButton}" Margin="8,0,4,8">
+					<StackPanel Spacing="45">
+						
+						<!-- ITEMS NUMBER-->
+						<StackPanel>
+							<TextBlock Text="Items:" Classes="SettingsHeader" HorizontalAlignment="Center" />
+							<Grid ColumnDefinitions="*,Auto,*" RowDefinitions="Auto, Auto, Auto, Auto">
+								<NumericUpDown Minimum="1" Maximum="1024" Margin="0,4,0,4" FormatString="\{0:0\}" Value="{Binding ItemsHorizontally}" />
+								<TextBlock Text="X" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,10,0" />
+								<NumericUpDown Grid.Column="2" Minimum="1" Maximum="1024" Margin="0,4,0,4" FormatString="\{0:0\}" Value="{Binding ItemsVertically}" />
+								<TextBlock Text="Width" Grid.Row="1" FontSize="10"/>
+								<TextBlock Text="Height" Grid.Row="1" Grid.Column="2" FontSize="10"/>
+								<StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,16,0,0" Spacing="4">
+									<TextBlock Text="{Binding Items.Count, StringFormat='Current items: \{0:#,0\}'}" />
+									<TextBlock Text="{Binding PendingItems, StringFormat='Pending items: \{0:#,0\}'}" />
+								</StackPanel>
+								<StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Right" Spacing="10">
+									<Button Content="Reset" Command="{Binding ResetCommand}" />
+									<Button Content="Apply" Command="{Binding ApplyCommand}"/>
+								</StackPanel>
+							</Grid>
+						</StackPanel>
+						
+						<!-- WIDTH/HEIGHT-->
+						<StackPanel Spacing="8">
+							<TextBlock Text="Dimensions:" Classes="SettingsHeader" HorizontalAlignment="Center" />
+							<StackPanel>
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Text="Item height:" Foreground="White"/>
+									<TextBlock Grid.Column="1" Text="{Binding Value, ElementName=xe_HeightSlider, StringFormat='[\{0:0\}]'}" />
+								</Grid>
+								<Slider x:Name="xe_HeightSlider" Minimum="24" Maximum="512" Value="35" />
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Text="Item width:" Foreground="White"/>
+									<TextBlock Grid.Column="1" Text="{Binding Value, ElementName=xe_WidthSlider, StringFormat='[\{0:0\}]'}" />
+								</Grid>
+								<Slider x:Name="xe_WidthSlider" Minimum="24" Maximum="512" Value="35"/>
+							</StackPanel>
+						</StackPanel>
 					</StackPanel>
-				</Grid>
+				</ScrollViewer>
 			</DockPanel>
 		</SplitView.Pane>
-		<g:VirtualizedGrid Margin="20" Items="{Binding Items}" ItemWidth="{Binding Value, ElementName=xe_WidthSlider}" ItemHeight="{Binding Value, ElementName=xe_HeightSlider}" MaxItemsInRow="{Binding MaxColumns}">
+		<!-- VIRTUALIZED GRID -->
+		<g:VirtualizedGrid
+			x:Name="xe_VirtualizedGrid"
+			Margin="20"
+			Items="{Binding Items}"
+			ItemWidth="{Binding Value, ElementName=xe_WidthSlider}"
+			ItemHeight="{Binding Value, ElementName=xe_HeightSlider}"
+			MaxItemsInRow="{Binding MaxItemsInRow}">
 			<g:VirtualizedGrid.ItemTemplate>
 				<DataTemplate>
 					<controls:GridItem />
