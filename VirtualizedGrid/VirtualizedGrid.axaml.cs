@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using System.Collections;
@@ -75,6 +76,19 @@ namespace VirtualizedGrid
             set => SetValue(DisableSmoothScrollingProperty, value);
         }
 
+        // DEBUG
+        
+        public static readonly StyledProperty<int> RenderedControlsNumberProperty =
+            AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(RenderedControlsNumber),
+                defaultBindingMode: BindingMode.OneWayToSource);
+
+        public int RenderedControlsNumber
+        {
+            get => GetValue(RenderedControlsNumberProperty);
+            set => SetValue(RenderedControlsNumberProperty, value);
+        }
+        // DEBUG
+
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
@@ -146,6 +160,7 @@ namespace VirtualizedGrid
                 UpdateItemsCanvas();
                 UpdateScrollViewerBoundaries();
                 UpdatViewportDataContext();
+                RenderedControlsNumber = _renderedControls.Count * _renderedControls.FirstOrDefault()?.Count ?? 0;
             }
         }
 

@@ -31,6 +31,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private int _maxItemsInRow = 1000;
 
+    [ObservableProperty]
+    private int _renderedItems;
+
     public int PendingItems => ItemsHorizontally * ItemsVertically;
 
     public double ManagedMemoryUsed => (double)GC.GetTotalMemory(true) / (1024 * 1024);
