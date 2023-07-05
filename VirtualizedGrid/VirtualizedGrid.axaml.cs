@@ -347,9 +347,10 @@ namespace VirtualizedGrid
         /// </summary>
         private void UpdatViewportDataContext()
         {
-            for (int y = 0; y < _renderedControls.Count; y++)
+            // Iterate only through controls that are actually displayed; ignore those cached.
+            for (int y = 0; y < Math.Min(GetNumberOfRenderedItemsVertically(), ResolveMaxVerticalVisibleItems()); y++)
             {
-                for (int x = 0; x < _renderedControls[y].Count; x++)
+                for (int x = 0; x < Math.Min(GetNumberOfRenderedItemsHorizontally(), ResolveMaxHorizontalVisibleItems()); x++)
                 {
                     Control control = _renderedControls[y][x];
                     int itemCoordX = ResolveHorizontalItemsOffset() + x;
