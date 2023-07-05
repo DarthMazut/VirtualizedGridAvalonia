@@ -6,10 +6,10 @@
              x:Class="VirtualizedGridDemo.Controls.GridItem"
 			 IsVisible="{Binding Visible}">
 	<Border Background="MediumSeaGreen" Margin="0" BorderThickness="2" BorderBrush="Green">
-		<Border Width="17" Height="17" HorizontalAlignment="Center" VerticalAlignment="Center" Background="Orange" />
-		<!--<Grid>
+		<StackPanel>
 			<TextBlock Text="{Binding Text}" Foreground="Black" />
-			<CheckBox IsChecked="{Binding IsChecked}"/>
-		</Grid>-->
+			<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1"/>
+			<!--<CheckBox IsChecked="{Binding IsChecked}"/>-->
+		</StackPanel>
 	</Border>
 </UserControl>

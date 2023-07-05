@@ -13,6 +13,7 @@ namespace VirtualizedGrid
 {
     public class VirtualizedGrid : TemplatedControl
     {
+        private bool _supressCache;
         private bool _isTemplateApplied;
 
         private ScrollViewer PART_ScrollViewer = null!;
@@ -39,6 +40,9 @@ namespace VirtualizedGrid
 
         public static readonly StyledProperty<bool> DisableSmoothScrollingProperty =
             AvaloniaProperty.Register<VirtualizedGrid, bool>(nameof(DisableSmoothScrolling));
+
+        public static readonly StyledProperty<int> MaxItemsCacheProperty =
+            AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(MaxItemsCache));
 
         public double ItemHeight
         {
@@ -76,8 +80,14 @@ namespace VirtualizedGrid
             set => SetValue(DisableSmoothScrollingProperty, value);
         }
 
+        public int MaxItemsCache
+        {
+            get => GetValue(MaxItemsCacheProperty);
+            set => SetValue(MaxItemsCacheProperty, value);
+        }
+
         // DEBUG
-        
+
         public static readonly StyledProperty<int> RenderedControlsNumberProperty =
             AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(RenderedControlsNumber),
                 defaultBindingMode: BindingMode.OneWayToSource);
@@ -87,6 +97,7 @@ namespace VirtualizedGrid
             get => GetValue(RenderedControlsNumberProperty);
             set => SetValue(RenderedControlsNumberProperty, value);
         }
+
         // DEBUG
 
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -130,8 +141,10 @@ namespace VirtualizedGrid
                 change.Property.Name == nameof(ItemHeight) ||
                 change.Property.Name == nameof(ItemWidth))
             {
+                _supressCache = true;
                 UpdateItemsDimensions();
                 UpdateState();
+                _supressCache = false;
             }
         }
 
@@ -160,6 +173,7 @@ namespace VirtualizedGrid
                 UpdateItemsCanvas();
                 UpdateScrollViewerBoundaries();
                 UpdatViewportDataContext();
+
                 RenderedControlsNumber = _renderedControls.Count * _renderedControls.FirstOrDefault()?.Count ?? 0;
             }
         }
@@ -186,7 +200,15 @@ namespace VirtualizedGrid
 
             if (currentColumnsNumber > expectedColumnsNumber)
             {
-                RemoveColumns(currentColumnsNumber - expectedColumnsNumber);
+                int numberOfColumnsToRemove = currentColumnsNumber - expectedColumnsNumber;
+
+                if (expectedColumnsNumber > GetMaxItemsInCurrentViewportX() && !_supressCache)
+                {
+                    int deltaRemoveColumn = MaxItemsCache / ResolveMaxVerticalVisibleItems();
+                    numberOfColumnsToRemove -= deltaRemoveColumn;
+                }
+
+                RemoveColumns(numberOfColumnsToRemove);
             }
         }
 
@@ -202,7 +224,15 @@ namespace VirtualizedGrid
 
             if (currentRowsNumber > expectedRowsNumber)
             {
-                RemoveRows(currentRowsNumber - expectedRowsNumber);
+                int numberOfRowToRemove = currentRowsNumber - expectedRowsNumber;
+
+                if (expectedRowsNumber > GetMaxItemsInCurrentViewportY() && !_supressCache)
+                {
+                    int deltaRemoveRows = (MaxItemsCache - expectedRowsNumber * (GetNumberOfRenderedItemsHorizontally() - ResolveMaxHorizontalVisibleItems())) / GetNumberOfRenderedItemsHorizontally();
+                    numberOfRowToRemove -= deltaRemoveRows;
+                }
+
+                RemoveRows(numberOfRowToRemove);
             }
         }
 
@@ -271,6 +301,11 @@ namespace VirtualizedGrid
 
         private void RemoveColumns(int numberToRemove)
         {
+            if (numberToRemove <= 0)
+            {
+                return;
+            }
+
             List<Control> elementsToRemove = new();
 
             for (int y = 0; y < _renderedControls.Count; y++)
@@ -289,6 +324,11 @@ namespace VirtualizedGrid
 
         private void RemoveRows(int numberToRemove)
         {
+            if (numberToRemove <= 0)
+            {
+                return;
+            }
+
             List<Control> elementsToRemove = _renderedControls.TakeLast(numberToRemove).SelectMany(y => y).ToList();
 
             _renderedControls.RemoveRange(_renderedControls.Count - numberToRemove, numberToRemove);
@@ -366,6 +406,18 @@ namespace VirtualizedGrid
 
             return Items[index];
         }
+
+        /// <summary>
+        /// How many elements can fit in current viewport horizontaly?
+        /// </summary>
+        private int GetMaxItemsInCurrentViewportX()
+            => (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Width / ItemWidth);
+
+        /// <summary>
+        /// How many elements can fit in current viewport verticaly?
+        /// </summary>
+        private int GetMaxItemsInCurrentViewportY()
+            => (int)Math.Ceiling(PART_ClipScrollViewer.Bounds.Height / ItemHeight);
 
         private int GetNumberOfRenderedItemsHorizontally() => _renderedControls.FirstOrDefault()?.Count ?? 0;
 
