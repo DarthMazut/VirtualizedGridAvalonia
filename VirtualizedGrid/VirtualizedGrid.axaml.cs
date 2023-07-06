@@ -6,6 +6,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using System.Collections;
 using System.Collections.Specialized;
 
@@ -113,7 +114,7 @@ namespace VirtualizedGrid
                 throw new NullReferenceException(nameof(PART_ItemsCanvas));
 
             PART_ScrollViewer.ScrollChanged += ScrollChanged;
-            LayoutUpdated += (s, e) => UpdateState();
+            LayoutUpdated += (s, e) => ScheduleOrPostponeUpdate();
 
             _isTemplateApplied = true;
         }
@@ -160,7 +161,41 @@ namespace VirtualizedGrid
                     .WithY(yOffset);
             }
 
-            UpdatViewportDataContext();
+            //UpdatViewportDataContext();
+        }
+
+        DateTimeOffset _updateTime = DateTimeOffset.MinValue;
+        Task? _updateTask = null;
+
+        private void ScheduleOrPostponeUpdate()
+        {
+            if (_updateTask is null)
+            {
+                // Schedule
+                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(500);
+                _updateTask = Task.Run(async () =>
+                {
+                    bool stop = false;
+                    while (!stop)
+                    {
+                        await Task.Delay(50);
+                        if (DateTimeOffset.UtcNow > _updateTime)
+                        {
+                            Dispatcher.UIThread.Invoke(() =>
+                            {
+                                UpdateState();
+                                _updateTask = null;
+                                stop = true;
+                            }, DispatcherPriority.Background);
+                        }
+                    }
+                });
+            }
+            else
+            {
+                // Postpone
+                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(500);
+            }
         }
 
         /// <summary>

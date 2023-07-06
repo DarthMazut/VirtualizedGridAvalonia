@@ -7,9 +7,10 @@
 			 IsVisible="{Binding Visible}">
 	<Border Background="MediumSeaGreen" Margin="0" BorderThickness="2" BorderBrush="Green">
 		<StackPanel>
-			<TextBlock Text="{Binding Text}" Foreground="Black" />
-			<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1"/>
+			<!--<TextBlock Text="{Binding Text}" Foreground="Black" />-->
+			<!--<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1"/>-->
 			<!--<CheckBox IsChecked="{Binding IsChecked}"/>-->
+			<TextBox Text="{Binding Text}" />
 		</StackPanel>
 	</Border>
 </UserControl>
