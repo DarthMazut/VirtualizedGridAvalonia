@@ -14,8 +14,11 @@ namespace VirtualizedGrid
 {
     public class VirtualizedGrid : TemplatedControl
     {
-        private bool _supressCache;
         private bool _isTemplateApplied;
+
+        private bool _supressCache;
+        private DateTimeOffset _updateTime = DateTimeOffset.MinValue;
+        private Task? _updateTask = null;
 
         private ScrollViewer PART_ScrollViewer = null!;
         private ScrollViewer PART_ClipScrollViewer = null!;
@@ -44,6 +47,9 @@ namespace VirtualizedGrid
 
         public static readonly StyledProperty<int> MaxItemsCacheProperty =
             AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(MaxItemsCache));
+
+        public static readonly StyledProperty<int> RefreshDelayProperty =
+            AvaloniaProperty.Register<VirtualizedGrid, int>(nameof(RefreshDelay));
 
         public double ItemHeight
         {
@@ -85,6 +91,12 @@ namespace VirtualizedGrid
         {
             get => GetValue(MaxItemsCacheProperty);
             set => SetValue(MaxItemsCacheProperty, value);
+        }
+
+        public int RefreshDelay
+        {
+            get => GetValue(RefreshDelayProperty);
+            set => SetValue(RefreshDelayProperty, value);
         }
 
         // DEBUG
@@ -161,24 +173,27 @@ namespace VirtualizedGrid
                     .WithY(yOffset);
             }
 
-            //UpdatViewportDataContext();
+            ClearViewportDataContext();
         }
-
-        DateTimeOffset _updateTime = DateTimeOffset.MinValue;
-        Task? _updateTask = null;
 
         private void ScheduleOrPostponeUpdate()
         {
+            if (RefreshDelay <= 0)
+            {
+                UpdateState();
+                return;
+            }
+
             if (_updateTask is null)
             {
                 // Schedule
-                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(500);
+                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(RefreshDelay);
                 _updateTask = Task.Run(async () =>
                 {
                     bool stop = false;
                     while (!stop)
                     {
-                        await Task.Delay(50);
+                        await Task.Delay(Math.Max(RefreshDelay / 10, 1));
                         if (DateTimeOffset.UtcNow > _updateTime)
                         {
                             Dispatcher.UIThread.Invoke(() =>
@@ -194,7 +209,7 @@ namespace VirtualizedGrid
             else
             {
                 // Postpone
-                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(500);
+                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(RefreshDelay);
             }
         }
 
@@ -401,6 +416,11 @@ namespace VirtualizedGrid
                     control.DataContext = GetItem(itemCoordX, itemCoordY);
                 }
             }
+        }
+
+        private void ClearViewportDataContext()
+        {
+            _renderedControls.SelectMany(row => row).ToList().ForEach(c => c.DataContext = null);
         }
 
         private Control CreateItem(int x, int y)
