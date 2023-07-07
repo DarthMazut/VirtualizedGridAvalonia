@@ -184,16 +184,18 @@ namespace VirtualizedGrid
                 return;
             }
 
+            int refreshDelay = RefreshDelay;
+
             if (_updateTask is null)
             {
                 // Schedule
-                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(RefreshDelay);
+                _updateTime = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(refreshDelay);
                 _updateTask = Task.Run(async () =>
                 {
                     bool stop = false;
                     while (!stop)
                     {
-                        await Task.Delay(Math.Max(RefreshDelay / 10, 1));
+                        await Task.Delay(Math.Max(refreshDelay / 10, 1));
                         if (DateTimeOffset.UtcNow > _updateTime)
                         {
                             Dispatcher.UIThread.Invoke(() =>
@@ -209,7 +211,7 @@ namespace VirtualizedGrid
             else
             {
                 // Postpone
-                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(RefreshDelay);
+                _updateTime = DateTimeOffset.UtcNow.AddMilliseconds(refreshDelay);
             }
         }
 

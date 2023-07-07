@@ -162,7 +162,8 @@
 			ItemWidth="{Binding Value, ElementName=xe_WidthSlider}"
 			ItemHeight="{Binding Value, ElementName=xe_HeightSlider}"
 			MaxItemsInRow="{Binding MaxItemsInRow}"
-			MaxItemsCache="100000"
+			MaxItemsCache="0"
+			RefreshDelay="100"
 			RenderedControlsNumber="{Binding RenderedItems}">
 			<g:VirtualizedGrid.ItemTemplate>
 				<DataTemplate>
