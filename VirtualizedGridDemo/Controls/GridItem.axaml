@@ -10,8 +10,8 @@
 
 	<Border Background="MediumSeaGreen" Margin="0" BorderThickness="2" BorderBrush="Green">
 		<StackPanel>
-			<TextBlock Text="{Binding Text}" Foreground="Black" />
-			<CheckBox IsChecked="{Binding IsChecked}"/>
+			<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Text}" Foreground="Black" />
+			<!--<CheckBox IsChecked="{Binding IsChecked}"/>-->
 			<!--<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1" Classes="HoverBorder"/>-->
 			<!--<TextBox Text="{Binding Text}" />-->
 		</StackPanel>

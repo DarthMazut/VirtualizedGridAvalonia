@@ -142,14 +142,19 @@
 						</StackPanel>
 						
 						<!-- PERFORMANCE -->
-						<StackPanel>
+						<StackPanel Spacing="8">
 							<TextBlock Text="Performance:" Classes="SettingsHeader" HorizontalAlignment="Center" />
 							<StackPanel>
-								<TextBlock Text="{Binding RenderedItems, StringFormat='Rendered items: \{0:0\}'}" />
+								<TextBlock Text="Max items cache:"/>
+								<Grid ColumnDefinitions="*,Auto" Margin="0,4,0,12">
+									<NumericUpDown x:Name="xe_MaxCacheItemsBox" Minimum="0" Value="0" FormatString="\{0:0\}"/>
+									<Button Grid.Column="1" Content="Apply" Margin="6,0,0,0" VerticalAlignment="Center" />
+								</Grid>
+								<TextBlock Text="{Binding RefreshDelay, ElementName=xe_VirtualizedGrid, StringFormat='Refresh delay [ms]: \{0:0\}'}"/>
+								<Slider x:Name="xe_RefreshDelaySlider" Minimum="0" Maximum="1000" Value="0" />
+								<TextBlock Text="{Binding RenderedItems, StringFormat='Rendered items: \{0:0\}'}" Margin="0,12,0,0" />
 							</StackPanel>
 						</StackPanel>
-						
-						
 					</StackPanel>
 				</ScrollViewer>
 			</DockPanel>
@@ -162,8 +167,8 @@
 			ItemWidth="{Binding Value, ElementName=xe_WidthSlider}"
 			ItemHeight="{Binding Value, ElementName=xe_HeightSlider}"
 			MaxItemsInRow="{Binding MaxItemsInRow}"
-			MaxItemsCache="0"
-			RefreshDelay="100"
+			MaxItemsCache="{Binding Value, ElementName=xe_MaxCacheItemsBox}"
+			RefreshDelay="{Binding Value, ElementName=xe_RefreshDelaySlider}"
 			RenderedControlsNumber="{Binding RenderedItems}">
 			<g:VirtualizedGrid.ItemTemplate>
 				<DataTemplate>
