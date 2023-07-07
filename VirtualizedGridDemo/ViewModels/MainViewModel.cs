@@ -62,7 +62,6 @@ public partial class MainViewModel : ViewModelBase
             for (int x = 0; x < ItemsHorizontally; x++)
             {
                 GridItemVM newItem = new(x, y);
-                //if (_rnd.Next(100) < 90) newItem.Visible = false;
                 newItems.Add(newItem);
             }
         }

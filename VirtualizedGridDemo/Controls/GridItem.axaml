@@ -4,16 +4,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="VirtualizedGridDemo.Controls.GridItem"
-			 xmlns:vm="clr-namespace:VirtualizedGridDemo.ViewModels"
-			 IsVisible="{Binding Visible}"
-			 >
+			 xmlns:vm="clr-namespace:VirtualizedGridDemo.ViewModels">
 
-	<Border Background="MediumSeaGreen" Margin="0" BorderThickness="2" BorderBrush="Green">
-		<StackPanel>
-			<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Text}" Foreground="Black" />
-			<!--<CheckBox IsChecked="{Binding IsChecked}"/>-->
-			<!--<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1" Classes="HoverBorder"/>-->
-			<!--<TextBox Text="{Binding Text}" />-->
-		</StackPanel>
+	<Border Background="MediumSeaGreen" Margin="2" BorderThickness="1" BorderBrush="Green">
+		<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Text}" Foreground="Black" />
+		<!--<CheckBox IsChecked="{Binding IsChecked}"/>-->
+		<!--<Border Width="17" Height="17" BorderBrush="Black" BorderThickness="1" Classes="HoverBorder"/>-->
 	</Border>
 </UserControl>
