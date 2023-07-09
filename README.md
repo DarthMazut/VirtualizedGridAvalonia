@@ -1,5 +1,7 @@
 # VirtualizedGrid
 
+![Screenshot](./Screenshots/Screenshot.JPG)
+
 ## About this control
 
 This control allows you to display a large number of items in two dimensions with virtualization. Virtualization ensures that only the items currently visible are rendered, maintaining performance even when dealing with thousands of items.
